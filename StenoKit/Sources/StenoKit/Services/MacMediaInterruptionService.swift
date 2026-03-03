@@ -435,6 +435,8 @@ final class MediaRemoteBridge: MediaRemoteBridging {
             setWantsNowPlayingNotifications?(false)
             StenoKitDiagnostics.logger.debug("MediaRemote bridge deinit forced unregister cleanup.")
         }
+        // Ensure callbackQueue has drained before unloading the framework image.
+        callbackQueue.sync {}
         if let handle {
             dlclose(handle)
         }
@@ -469,7 +471,7 @@ final class MediaRemoteBridge: MediaRemoteBridging {
 
     func nowPlayingPlaybackRate() async -> Double? {
         guard let getNowPlayingInfo, let playbackRateInfoKey else { return nil }
-        return await probeRunner.run { callback in
+        let playbackRateResult: Double?? = await probeRunner.run { callback in
             getNowPlayingInfo(callbackQueue) { info in
                 guard let info else {
                     callback(nil)
@@ -489,7 +491,8 @@ final class MediaRemoteBridge: MediaRemoteBridging {
                 }
                 callback(nil)
             }
-        } ?? nil
+        }
+        return playbackRateResult ?? nil
     }
 
     func isPlaybackStateAdvancing(_ playbackState: Int) -> Bool? {
@@ -561,6 +564,7 @@ private final class ProbeContinuationGate<Value: Sendable>: @unchecked Sendable 
         }
         self.continuation = nil
         lock.unlock()
+        // Never resume while holding the lock. Cancellation handlers may run concurrently.
         continuation.resume(returning: value)
     }
 }
@@ -574,6 +578,8 @@ private enum SystemMediaKeySender {
 
     @discardableResult
     private static func postSystemDefinedMediaEvent(key: Int32, isKeyDown: Bool) -> Bool {
+        // Undocumented system media event encoding used by NSEvent.systemDefined.
+        // keyState 0xA = down, 0xB = up; modifierFlags 0xA00 marks media-key context.
         let keyState = isKeyDown ? 0xA : 0xB
         let data1 = Int((key << 16) | (Int32(keyState) << 8))
 

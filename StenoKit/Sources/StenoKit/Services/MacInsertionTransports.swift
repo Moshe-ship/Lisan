@@ -41,7 +41,7 @@ public struct DirectTypingInsertionTransport: InsertionTransport {
 
         let preValue = Self.readFocusedElementValue()
 
-        try typeUnicode(text)
+        try await typeUnicode(text)
 
         // Only verify if we could read the pre-value (AX permission + element supports it)
         if preValue != nil {
@@ -104,8 +104,8 @@ public struct DirectTypingInsertionTransport: InsertionTransport {
         return valueRef as? String
     }
 
-    private func typeUnicode(_ text: String) throws {
-        guard let source = CGEventSource(stateID: .combinedSessionState) else {
+    private func typeUnicode(_ text: String) async throws {
+        guard let source = CGEventSource(stateID: .privateState) else {
             throw MacInsertionError.eventSourceUnavailable
         }
 
@@ -122,13 +122,15 @@ public struct DirectTypingInsertionTransport: InsertionTransport {
                 throw MacInsertionError.eventSourceUnavailable
             }
 
+            // Some frameworks ignore event Unicode payloads and derive text from keycode/state.
+            // InsertionService keeps accessibility and clipboard transports as fallbacks.
             keyDown.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: chunk)
             keyUp.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: chunk)
             keyDown.post(tap: .cghidEventTap)
             keyUp.post(tap: .cghidEventTap)
 
             if end < allCodeUnits.count {
-                usleep(10_000) // 10ms between chunks
+                try await Task.sleep(nanoseconds: 10_000_000) // 10ms between chunks
             }
         }
     }
@@ -161,19 +163,34 @@ public struct AccessibilityInsertionTransport: InsertionTransport {
         }
 
         let element = unsafeDowncast(focusedRef as AnyObject, to: AXUIElement.self)
-        let newValue = try composeUpdatedValue(for: element, insertion: text)
+        let composedUpdate = try composeUpdatedValue(for: element, insertion: text)
         let setStatus = AXUIElementSetAttributeValue(
             element,
             kAXValueAttribute as CFString,
-            newValue as CFTypeRef
+            composedUpdate.text as CFTypeRef
         )
 
         guard setStatus == .success else {
             throw MacInsertionError.attributeUpdateFailed
         }
+
+        // Best effort: restore caret to the end of the inserted text when possible.
+        if var newSelection = composedUpdate.newSelectionRange,
+           let selectionValue = AXValueCreate(.cfRange, &newSelection) {
+            _ = AXUIElementSetAttributeValue(
+                element,
+                kAXSelectedTextRangeAttribute as CFString,
+                selectionValue
+            )
+        }
     }
 
-    private func composeUpdatedValue(for element: AXUIElement, insertion: String) throws -> String {
+    private struct AccessibilityComposedUpdate {
+        let text: String
+        let newSelectionRange: CFRange?
+    }
+
+    private func composeUpdatedValue(for element: AXUIElement, insertion: String) throws -> AccessibilityComposedUpdate {
         var valueRef: CFTypeRef?
         let valueStatus = AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef)
         guard valueStatus == .success else {
@@ -192,26 +209,35 @@ public struct AccessibilityInsertionTransport: InsertionTransport {
         guard selectedStatus == .success,
               let selectedRangeRef,
               CFGetTypeID(selectedRangeRef) == AXValueGetTypeID() else {
-            return current + insertion
+            let updated = current + insertion
+            let caret = CFRange(location: updated.utf16.count, length: 0)
+            return AccessibilityComposedUpdate(text: updated, newSelectionRange: caret)
         }
 
         let selectedRangeValue = unsafeDowncast(selectedRangeRef as AnyObject, to: AXValue.self)
         guard AXValueGetType(selectedRangeValue) == .cfRange else {
-            return current + insertion
+            let updated = current + insertion
+            let caret = CFRange(location: updated.utf16.count, length: 0)
+            return AccessibilityComposedUpdate(text: updated, newSelectionRange: caret)
         }
 
         var selectedRange = CFRange()
         guard AXValueGetValue(selectedRangeValue, .cfRange, &selectedRange) else {
-            return current + insertion
+            let updated = current + insertion
+            let caret = CFRange(location: updated.utf16.count, length: 0)
+            return AccessibilityComposedUpdate(text: updated, newSelectionRange: caret)
         }
 
         guard let swiftRange = range(from: selectedRange, in: current) else {
-            return current + insertion
+            let updated = current + insertion
+            let caret = CFRange(location: updated.utf16.count, length: 0)
+            return AccessibilityComposedUpdate(text: updated, newSelectionRange: caret)
         }
 
         var updated = current
         updated.replaceSubrange(swiftRange, with: insertion)
-        return updated
+        let caret = CFRange(location: selectedRange.location + insertion.utf16.count, length: 0)
+        return AccessibilityComposedUpdate(text: updated, newSelectionRange: caret)
     }
 
     private func range(from cfRange: CFRange, in text: String) -> Range<String.Index>? {
@@ -296,7 +322,7 @@ public enum MacPasteHelper {
     }
 
     public static func simulateCommandV() -> Bool {
-        guard let source = CGEventSource(stateID: .combinedSessionState),
+        guard let source = CGEventSource(stateID: .privateState),
               let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false)
         else { return false }

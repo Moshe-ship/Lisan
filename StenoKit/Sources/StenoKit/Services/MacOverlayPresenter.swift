@@ -1,8 +1,9 @@
 #if os(macOS)
 import AppKit
+import QuartzCore
 
 @MainActor
-public final class MacOverlayPresenter: OverlayPresenter {
+public final class MacOverlayPresenter: NSObject, OverlayPresenter {
     private var window: NSWindow?
     private var statusDot: NSView?
     private var textField: NSTextField?
@@ -19,7 +20,19 @@ public final class MacOverlayPresenter: OverlayPresenter {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 
-    public init() {}
+    public override init() {
+        super.init()
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(accessibilityDisplayOptionsDidChange(_:)),
+            name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
 
     public func show(state: OverlayState) {
         ensureWindow()
@@ -164,10 +177,10 @@ public final class MacOverlayPresenter: OverlayPresenter {
             statusDot?.layer?.backgroundColor = color.cgColor
             return
         }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.25
-            self.statusDot?.layer?.backgroundColor = color.cgColor
-        }
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.25)
+        statusDot?.layer?.backgroundColor = color.cgColor
+        CATransaction.commit()
     }
 
     private func updateText(_ newText: String) {
@@ -249,6 +262,16 @@ public final class MacOverlayPresenter: OverlayPresenter {
         let x = screenFrame.origin.x + (screenFrame.width - window.frame.width) / 2
         let y = screenFrame.origin.y + screenFrame.height - window.frame.height - 40
         window.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    @objc
+    private func accessibilityDisplayOptionsDidChange(_: Notification) {
+        handleAccessibilityDisplayOptionsDidChange()
+    }
+
+    private func handleAccessibilityDisplayOptionsDidChange() {
+        guard reduceMotion else { return }
+        stopDotPulse()
     }
 }
 #endif
