@@ -127,6 +127,8 @@ public final class MacHotkeyMonitor: HotkeyService {
             return
         }
 
+        // Keep this assignment immediately after tap creation so callback re-enable
+        // logic can always find the live mach port.
         eventTap = tap
         tapContext.machPort = tap
 
@@ -195,8 +197,10 @@ public final class MacHotkeyMonitor: HotkeyService {
             return Unmanaged.passUnretained(event)
         }
 
+        // Callback already runs on the main run loop; dispatch async to avoid
+        // re-entrancy while the tap callback is still unwinding.
         DispatchQueue.main.async { ctx.onToggle?() }
-        return nil // suppress the event — no app sees it
+        return nil // For .defaultTap, nil suppresses delivery to downstream apps.
     }
 
     // MARK: - Utilities

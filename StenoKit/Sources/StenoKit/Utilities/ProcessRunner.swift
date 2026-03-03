@@ -84,6 +84,8 @@ private final class ProcessRunState: @unchecked Sendable {
         let cancelled = wasCancelled
         lock.unlock()
 
+        // Never resume continuations while holding lock.
+        // Cancellation handlers may execute concurrently and can otherwise deadlock.
         if cancelled {
             continuation.resume(throwing: CancellationError())
             return
@@ -107,6 +109,7 @@ private final class ProcessRunState: @unchecked Sendable {
         hasFinished = true
         self.continuation = nil
         lock.unlock()
+        // Resume outside lock. See withTaskCancellationHandler lock guidance.
         continuation.resume(throwing: error)
     }
 
@@ -124,6 +127,7 @@ private final class ProcessRunState: @unchecked Sendable {
         if process.isRunning {
             process.terminate()
         } else if let continuation {
+            // Resume outside lock. See withTaskCancellationHandler lock guidance.
             continuation.resume(throwing: CancellationError())
         }
     }

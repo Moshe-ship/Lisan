@@ -66,6 +66,8 @@ public actor SessionCoordinator {
     }
 
     public func stopPressToTalk(sessionID: SessionID, languageHints: [String] = ["en-US"]) async throws -> InsertResult {
+        // Remove session before the first await so actor reentrancy cannot process
+        // the same session twice while transcription/cleanup are in flight.
         guard let active = activeSessions.removeValue(forKey: sessionID) else {
             throw SessionCoordinatorError.sessionNotFound
         }
