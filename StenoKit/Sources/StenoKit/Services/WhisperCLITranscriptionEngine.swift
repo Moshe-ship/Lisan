@@ -86,8 +86,10 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
             throw WhisperCLITranscriptionError.outputMissing
         }
 
-        let text = try String(contentsOf: txtURL, encoding: .utf8)
+        let rawText = try String(contentsOf: txtURL, encoding: .utf8)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let text = Self.stripArtifacts(rawText)
 
         return RawTranscript(text: text)
     }
@@ -149,6 +151,49 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
         ]
 
         return orderedUnique(candidates.filter { fileManager.fileExists(atPath: $0) })
+    }
+
+    // MARK: - Artifact Stripping
+
+    private static let artifactSet: Set<String> = [
+        "music", "applause", "laughter", "noise", "silence", "inaudible",
+        "background noise", "blank_audio", "blank audio", "audio is blank",
+        "buzzing", "crowd", "cheering", "clapping", "sound effects"
+    ]
+
+    private static let bracketPattern = try! NSRegularExpression(pattern: #"\[([^\]]{1,40})\]"#)
+    private static let parenPattern = try! NSRegularExpression(pattern: #"\(([^)]{1,40})\)"#)
+    private static let multiSpacePattern = try! NSRegularExpression(pattern: #" {2,}"#)
+
+    static func stripArtifacts(_ text: String) -> String {
+        var result = text
+        let fullRange = NSRange(result.startIndex..., in: result)
+
+        // Remove bracketed artifacts like [Music], [BLANK_AUDIO]
+        for match in bracketPattern.matches(in: result, range: fullRange).reversed() {
+            guard let innerRange = Range(match.range(at: 1), in: result) else { continue }
+            let inner = result[innerRange].trimmingCharacters(in: .whitespaces).lowercased()
+            if artifactSet.contains(inner) {
+                let outerRange = Range(match.range, in: result)!
+                result.removeSubrange(outerRange)
+            }
+        }
+
+        // Remove parenthetical artifacts like (buzzing), (Music)
+        let updatedRange = NSRange(result.startIndex..., in: result)
+        for match in parenPattern.matches(in: result, range: updatedRange).reversed() {
+            guard let innerRange = Range(match.range(at: 1), in: result) else { continue }
+            let inner = result[innerRange].trimmingCharacters(in: .whitespaces).lowercased()
+            if artifactSet.contains(inner) {
+                let outerRange = Range(match.range, in: result)!
+                result.removeSubrange(outerRange)
+            }
+        }
+
+        // Collapse multiple spaces and trim
+        let collapsedRange = NSRange(result.startIndex..., in: result)
+        result = multiSpacePattern.stringByReplacingMatches(in: result, range: collapsedRange, withTemplate: " ")
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func orderedUnique(_ values: [String]) -> [String] {
