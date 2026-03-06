@@ -85,6 +85,7 @@ public enum InsertionStatus: String, Sendable, Codable, Equatable {
     case inserted
     case copiedOnly
     case failed
+    case noSpeech
 }
 
 public enum CleanupSource: String, Sendable, Codable, Equatable {

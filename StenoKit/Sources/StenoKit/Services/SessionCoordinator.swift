@@ -76,6 +76,10 @@ public actor SessionCoordinator {
         defer { try? FileManager.default.removeItem(at: audioURL) }
         var rawTranscript = try await transcriptionEngine.transcribe(audioURL: audioURL, languageHints: languageHints)
 
+        if rawTranscript.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return InsertResult(status: .noSpeech, method: .none, insertedText: "")
+        }
+
         rawTranscript.text = await snippetService.apply(to: rawTranscript.text, appContext: active.appContext)
 
         let profile = await styleProfileService.resolve(for: active.appContext)

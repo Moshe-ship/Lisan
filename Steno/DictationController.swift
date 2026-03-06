@@ -414,21 +414,27 @@ final class DictationController: ObservableObject {
 
             do {
                 let result = try await coordinator.stopPressToTalk(sessionID: sessionID)
-                lastTranscript = result.insertedText
                 switch result.status {
                 case .inserted:
+                    lastTranscript = result.insertedText
                     status = "Transcript inserted."
                     lastError = ""
                     overlay.show(state: .inserted)
                 case .copiedOnly:
+                    lastTranscript = result.insertedText
                     status = copiedOnlyStatusMessage(for: result)
                     lastError = result.errorMessage ?? ""
                     overlay.show(state: .copiedOnly)
                 case .failed:
+                    lastTranscript = result.insertedText
                     status = "Transcript ready but insertion failed."
                     let reason = result.errorMessage ?? "Insertion chain exhausted."
                     lastError = reason
                     overlay.show(state: .failure(message: reason))
+                case .noSpeech:
+                    status = "No speech detected."
+                    lastError = ""
+                    overlay.show(state: .noSpeechDetected)
                 }
 
                 if let fallbackWarning = fallbackWarningText(from: result.cleanupOutcome) {

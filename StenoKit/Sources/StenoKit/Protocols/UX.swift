@@ -13,6 +13,7 @@ public enum OverlayState: Sendable, Equatable {
     case inserted
     case copiedOnly
     case failure(message: String)
+    case noSpeechDetected
 }
 
 /// An opaque token ensuring media is only resumed if it was actually paused.

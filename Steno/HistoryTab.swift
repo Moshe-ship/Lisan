@@ -226,6 +226,8 @@ struct HistoryTab: View {
                 return ("Copied", StenoDesign.warningBackground)
             case .failed:
                 return ("Failed", StenoDesign.errorBackground)
+            case .noSpeech:
+                return ("No Speech", StenoDesign.surfaceSecondary)
             }
         }()
 
@@ -234,6 +236,7 @@ struct HistoryTab: View {
             case .inserted: return StenoDesign.success
             case .copiedOnly: return StenoDesign.warning
             case .failed: return StenoDesign.error
+            case .noSpeech: return StenoDesign.textSecondary
             }
         }()
 

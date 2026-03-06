@@ -83,6 +83,12 @@ public final class MacOverlayPresenter: NSObject, OverlayPresenter {
             stopDotPulse()
             updateText("Error: \(message)")
             animateDotColor(.systemRed)
+
+        case .noSpeechDetected:
+            stopTimer()
+            stopDotPulse()
+            updateText("No speech detected")
+            animateDotColor(.systemGray)
         }
 
         centerWindowNearTop()
