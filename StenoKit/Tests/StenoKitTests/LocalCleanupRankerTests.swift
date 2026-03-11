@@ -94,6 +94,144 @@ func rankerPrefersUnchangedCommandCandidate() {
     #expect(best.rulePathID == "unchanged-command")
 }
 
+@Test("Ranker prefers preserving contextual you know before determiner")
+func rankerPrefersPreservingContextualYouKnow() {
+    let raw = "I think you know the answer to that question."
+    let profile = StyleProfile(
+        name: "Ranker",
+        tone: .natural,
+        structureMode: .natural,
+        fillerPolicy: .balanced,
+        commandPolicy: .passthrough
+    )
+
+    let preserved = CleanupCandidate(
+        text: raw,
+        appliedEdits: [],
+        removedFillers: [],
+        rulePathID: "preserved"
+    )
+    let destructive = CleanupCandidate(
+        text: "I think the answer to that question.",
+        appliedEdits: [.init(kind: .fillerRemoval, from: "you know", to: "")],
+        removedFillers: ["you know"],
+        rulePathID: "destructive"
+    )
+
+    let ranker = LocalCleanupRanker()
+    let preservedScore = ranker.scoreCandidate(
+        rawText: raw,
+        candidate: preserved,
+        profile: profile
+    )
+    let destructiveScore = ranker.scoreCandidate(
+        rawText: raw,
+        candidate: destructive,
+        profile: profile
+    )
+    let best = ranker.bestCandidate(
+        rawText: raw,
+        candidates: [destructive, preserved],
+        profile: profile
+    )
+
+    #expect(preservedScore.totalScore > destructiveScore.totalScore)
+    #expect(best.rulePathID == "preserved")
+}
+
+@Test("Ranker prefers valid filler cleanup over raw pass through")
+func rankerPrefersValidYouKnowCleanup() {
+    let raw = "Um the report was you know solid and everyone agreed with the findings."
+    let profile = StyleProfile(
+        name: "Ranker",
+        tone: .natural,
+        structureMode: .natural,
+        fillerPolicy: .balanced,
+        commandPolicy: .passthrough
+    )
+
+    let rawCandidate = CleanupCandidate(
+        text: raw,
+        appliedEdits: [],
+        removedFillers: [],
+        rulePathID: "raw-pass-through"
+    )
+    let cleaned = CleanupCandidate(
+        text: "the report was solid and everyone agreed with the findings.",
+        appliedEdits: [
+            .init(kind: .fillerRemoval, from: "um", to: ""),
+            .init(kind: .fillerRemoval, from: "you know", to: "")
+        ],
+        removedFillers: ["um", "you know"],
+        rulePathID: "cleaned"
+    )
+
+    let ranker = LocalCleanupRanker()
+    let rawScore = ranker.scoreCandidate(
+        rawText: raw,
+        candidate: rawCandidate,
+        profile: profile
+    )
+    let cleanedScore = ranker.scoreCandidate(
+        rawText: raw,
+        candidate: cleaned,
+        profile: profile
+    )
+    let best = ranker.bestCandidate(
+        rawText: raw,
+        candidates: [rawCandidate, cleaned],
+        profile: profile
+    )
+
+    #expect(cleanedScore.totalScore > rawScore.totalScore)
+    #expect(best.rulePathID == "cleaned")
+}
+
+@Test("Ranker prefers standalone you know cleanup over raw pass through")
+func rankerPrefersStandaloneYouKnowCleanup() {
+    let raw = "The team was ready you know."
+    let profile = StyleProfile(
+        name: "Ranker",
+        tone: .natural,
+        structureMode: .natural,
+        fillerPolicy: .balanced,
+        commandPolicy: .passthrough
+    )
+
+    let rawCandidate = CleanupCandidate(
+        text: raw,
+        appliedEdits: [],
+        removedFillers: [],
+        rulePathID: "raw-pass-through"
+    )
+    let cleaned = CleanupCandidate(
+        text: "The team was ready.",
+        appliedEdits: [.init(kind: .fillerRemoval, from: "you know", to: "")],
+        removedFillers: ["you know"],
+        rulePathID: "cleaned"
+    )
+
+    let ranker = LocalCleanupRanker()
+    let rawScore = ranker.scoreCandidate(
+        rawText: raw,
+        candidate: rawCandidate,
+        profile: profile
+    )
+    let cleanedScore = ranker.scoreCandidate(
+        rawText: raw,
+        candidate: cleaned,
+        profile: profile
+    )
+    let best = ranker.bestCandidate(
+        rawText: raw,
+        candidates: [rawCandidate, cleaned],
+        profile: profile
+    )
+
+    #expect(cleanedScore.totalScore > rawScore.totalScore)
+    #expect(best.rulePathID == "cleaned")
+}
+
 @Test("Candidate generator emits deterministic, deduplicated candidate set")
 func candidateGeneratorDeterministicDeduped() async throws {
     let raw = RawTranscript(text: "Like, I'd like to ship this, you know.")
