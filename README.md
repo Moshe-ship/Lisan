@@ -154,6 +154,10 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting and response expectat
 
 See [SUPPORT.md](SUPPORT.md) for usage help and bug report paths.
 
+## Acknowledgments
+
+Steno uses [whisper.cpp](https://github.com/ggerganov/whisper.cpp) by Georgi Gerganov and contributors for local speech-to-text transcription. whisper.cpp is licensed under the MIT License. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the upstream notice text included with this repository.
+
 ## License
 
 MIT — see [LICENSE](LICENSE) file for details.
