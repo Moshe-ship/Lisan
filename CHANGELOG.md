@@ -2,17 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.9] - 2026-03-11
+
+### Fixed
+- Updated the in-app `Test Setup` check to launch `whisper-cli` with the same dynamic-library environment as real dictation, so local whisper.cpp builds validate correctly from Settings.
+- Surfaced stderr when the setup check fails, making local whisper.cpp configuration errors easier to diagnose.
 
 ## [0.1.8] - 2026-03-11
 
 ### Changed
 - Enabled whisper.cpp voice activity detection when a VAD model is available and kept the derived VAD model path aligned with the selected Whisper model.
 - Surfaced VAD setup guidance in onboarding, settings, and setup docs so silence and background-noise suppression are easier to configure correctly.
-- Balanced local cleanup now preserves intentional uses of "you know" while still removing filler cases, and press-to-talk starts capture before optional media interruption to avoid clipping the first words.
+- Balanced local cleanup now preserves intentional uses of "you know" while still removing filler cases and press-to-talk starts capture before optional media interruption to avoid clipping the first words.
 
 ### Fixed
 - Added a no-speech session path and overlay state so empty captures do not insert junk text.
