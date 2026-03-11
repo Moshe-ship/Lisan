@@ -31,7 +31,7 @@ struct CleanupStyleSettingsSection: View {
 
             describedPicker(
                 "Filler removal",
-                description: "How aggressively \u{201C}um\u{201D}, \u{201C}like\u{201D} are removed",
+                description: "How aggressively fillers like \u{201C}um\u{201D}, \u{201C}you know\u{201D}, and \u{201C}like\u{201D} are removed",
                 selection: $preferences.globalStyleProfile.fillerPolicy
             )
 
