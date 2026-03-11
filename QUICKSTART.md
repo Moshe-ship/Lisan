@@ -12,10 +12,13 @@ cd vendor/whisper.cpp
 git checkout v1.8.3
 cmake -B build && cmake --build build --config Release
 ./models/download-ggml-model.sh small.en
+cd models
+./download-vad-model.sh silero-v6.2.0
+cd ..
 cd ../..
 ```
 
-Expected result: `whisper.cpp` and the `small.en` model are ready under `vendor/whisper.cpp`.
+Expected result: `whisper.cpp`, the `small.en` model, and the `ggml-silero-v6.2.0.bin` VAD model are ready under `vendor/whisper.cpp`.
 
 ## 2) Generate the Xcode project
 
@@ -41,7 +44,7 @@ Steno runs transcription and cleanup fully locally with no cloud text cleanup st
 
 ## Verify setup quickly
 
-- Press and hold `Option` to record, release to transcribe.
+- Press and hold `Option` to start recording immediately, then release to transcribe.
 - Toggle hands-free mode using the configured function key (default `F18`).
 - Confirm text output works in both a text editor and a terminal.
 

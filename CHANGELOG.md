@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-03-11
+
+### Changed
+- Enabled whisper.cpp voice activity detection when a VAD model is available and kept the derived VAD model path aligned with the selected Whisper model.
+- Surfaced VAD setup guidance in onboarding, settings, and setup docs so silence and background-noise suppression are easier to configure correctly.
+- Balanced local cleanup now preserves intentional uses of "you know" while still removing filler cases, and press-to-talk starts capture before optional media interruption to avoid clipping the first words.
+
+### Fixed
+- Added a no-speech session path and overlay state so empty captures do not insert junk text.
+- Stripped known whisper artifact markers before insertion and history persistence.
+- Tightened macOS main-actor shutdown, overlay, and MediaRemote callback paths to keep the app stable under Swift 6/Xcode concurrency analysis.
+
+### Tests
+- Added regression coverage for artifact stripping, no-speech gating, VAD flag forwarding/model-path sync, and contextual "you know" cleanup and ranking.
+
 ## [0.1.7] - 2026-03-03
 
 ### Changed

@@ -14,8 +14,9 @@ Steno is built for a premium dictation workflow without subscription lock-in: hi
 ## What Steno Does
 
 - High-accuracy local transcription with `whisper.cpp` (audio never leaves your Mac)
+- Optional VAD-backed silence and background-noise suppression to avoid empty or hallucinated inserts
 - Smart app-aware paste (target-aware insertion): terminals prefer paste, editors use direct typing or accessibility insertion
-- Local transcript cleanup (no cloud dependency)
+- Local transcript cleanup with context-aware filler handling (no cloud dependency)
 - Global hotkeys: Option hold-to-talk and configurable hands-free toggle
 - Menu bar app with status overlay
 - 30-day transcript history with search
@@ -93,7 +94,7 @@ Steno is built for a premium dictation workflow without subscription lock-in: hi
 
 ## Usage
 
-- **Option Hold-to-Talk**: hold Option to record, release to transcribe and insert
+- **Option Hold-to-Talk**: hold Option to start recording immediately, release to transcribe and insert
 - **Hands-Free Toggle**: press the configured function key (default `F18`) to start/stop recording
 - **Menu Bar**: Click icon to show app window, right-click for quick actions
 - **Recording Modes**: Press-to-talk (immediate recording) or hands-free (toggle on/off)
