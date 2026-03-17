@@ -15,6 +15,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Tightened spacing between entry rows in word corrections and text shortcuts.
 - Grouped helper captions closer to their associated controls in recording and media sections.
 - Added a divider above Save & Apply for clearer separation from settings content.
+- Recording mic button now uses a two-ring staggered ripple pulse and a softer diffuse glow shadow.
+- Mic button responds to presses with a spring scale-down for tactile feedback.
 
 ## [0.1.9] - 2026-03-11
 
