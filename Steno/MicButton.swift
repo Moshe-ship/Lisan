@@ -6,7 +6,8 @@ struct MicButton: View {
     let handsFreeOn: Bool
     let onTap: () -> Void
 
-    @State private var glowAnimating = false
+    @State private var innerGlowActive = false
+    @State private var outerGlowActive = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -14,35 +15,93 @@ struct MicButton: View {
             if #available(macOS 14.0, *) {
                 micButton
                     .onChange(of: isRecording) { _, recording in
-                        glowAnimating = recording
+                        handleRecordingChange(recording)
                     }
             } else {
                 micButton
                     .onChange(of: isRecording) { recording in
-                        glowAnimating = recording
+                        handleRecordingChange(recording)
                     }
             }
         }
         .onAppear {
             if isRecording {
-                glowAnimating = true
+                innerGlowActive = true
+                outerGlowActive = true
             }
+        }
+    }
+
+    private func handleRecordingChange(_ recording: Bool) {
+        if recording {
+            innerGlowActive = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                outerGlowActive = true
+            }
+        } else {
+            innerGlowActive = false
+            outerGlowActive = false
         }
     }
 
     private var micButton: some View {
         Button(action: onTap) {
             ZStack {
-                // Glow ring (visible only when recording)
+                // Outer glow ring (visible only when recording)
                 if isRecording {
                     Circle()
-                        .stroke(StenoDesign.accent, lineWidth: StenoDesign.borderHeavy)
-                        .frame(width: StenoDesign.micButtonGlowSize, height: StenoDesign.micButtonGlowSize)
-                        .opacity(reduceMotion ? StenoDesign.opacityDisabled : (glowAnimating ? StenoDesign.opacityGlowMax : StenoDesign.opacityMuted))
-                        .scaleEffect(reduceMotion ? 1.0 : (glowAnimating ? StenoDesign.micButtonGlowScale : 1.0))
+                        .stroke(
+                            StenoDesign.accent,
+                            lineWidth: StenoDesign.borderThick
+                        )
+                        .frame(
+                            width: StenoDesign.micButtonOuterRingSize,
+                            height: StenoDesign.micButtonOuterRingSize
+                        )
+                        .opacity(
+                            reduceMotion
+                                ? StenoDesign.opacityBorder
+                                : (outerGlowActive ? 0.25 : 0.0)
+                        )
+                        .scaleEffect(
+                            reduceMotion
+                                ? 1.0
+                                : (outerGlowActive ? 1.1 : 1.0)
+                        )
                         .animation(
-                            reduceMotion ? nil : .easeInOut(duration: StenoDesign.animationGlow).repeatForever(autoreverses: true),
-                            value: glowAnimating
+                            reduceMotion
+                                ? nil
+                                : .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
+                            value: outerGlowActive
+                        )
+                }
+
+                // Inner glow ring (visible only when recording)
+                if isRecording {
+                    Circle()
+                        .stroke(
+                            StenoDesign.accent,
+                            lineWidth: StenoDesign.borderThick
+                        )
+                        .frame(
+                            width: StenoDesign.micButtonInnerRingSize,
+                            height: StenoDesign.micButtonInnerRingSize
+                        )
+                        .opacity(
+                            reduceMotion
+                                ? StenoDesign.opacityBorder
+                                : (innerGlowActive ? 0.4 : 0.0)
+                        )
+                        .scaleEffect(
+                            reduceMotion
+                                ? 1.0
+                                : (innerGlowActive ? 1.1 : 1.0)
+                        )
+                        .animation(
+                            reduceMotion
+                                ? nil
+                                : .easeInOut(duration: 1.5).repeatForever(autoreverses: true),
+                            value: innerGlowActive
                         )
                 }
 
@@ -84,7 +143,7 @@ struct MicButton: View {
                 )
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
         .accessibilityLabel(micAccessibilityLabel)
         .accessibilityHint(micAccessibilityHint)
         .accessibilityValue(micAccessibilityValue)

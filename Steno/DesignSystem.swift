@@ -129,7 +129,7 @@ enum StenoDesign {
             case .xl:
                 return ShadowStyle(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
             case .recording:
-                return ShadowStyle(color: StenoDesign.accent.opacity(0.3), radius: 12, x: 0, y: 2)
+                return ShadowStyle(color: StenoDesign.accent.opacity(0.25), radius: 16, x: 0, y: 2)
             case .idle:
                 return ShadowStyle(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
             }
@@ -148,7 +148,7 @@ enum StenoDesign {
             case .xl:
                 return ShadowStyle(color: .black.opacity(0.40), radius: 12, x: 0, y: 6)
             case .recording:
-                return ShadowStyle(color: StenoDesign.accent.opacity(0.3), radius: 12, x: 0, y: 2)
+                return ShadowStyle(color: StenoDesign.accent.opacity(0.25), radius: 16, x: 0, y: 2)
             case .idle:
                 return ShadowStyle(color: .black.opacity(0.25), radius: 6, x: 0, y: 2)
             }
@@ -157,9 +157,9 @@ enum StenoDesign {
 
     // MARK: - Component Sizes
 
-    static let micButtonGlowSize: CGFloat = 88
+    static let micButtonInnerRingSize: CGFloat = 84
+    static let micButtonOuterRingSize: CGFloat = 96
     static let micButtonSize: CGFloat = 72
-    static let micButtonGlowScale: CGFloat = 1.2
     static let dividerHeight: CGFloat = 1
     static let windowMinWidth: CGFloat = 600
     static let windowIdealWidth: CGFloat = 620
