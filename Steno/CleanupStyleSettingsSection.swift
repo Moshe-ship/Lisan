@@ -23,17 +23,23 @@ struct CleanupStyleSettingsSection: View {
                 selection: $preferences.globalStyleProfile.tone
             )
 
+            Divider()
+
             describedPicker(
                 "Structure",
                 description: "How the output text is formatted",
                 selection: $preferences.globalStyleProfile.structureMode
             )
 
+            Divider()
+
             describedPicker(
                 "Filler removal",
                 description: "How aggressively fillers like \u{201C}um\u{201D}, \u{201C}you know\u{201D}, and \u{201C}like\u{201D} are removed",
                 selection: $preferences.globalStyleProfile.fillerPolicy
             )
+
+            Divider()
 
             describedPicker(
                 "Commands",
