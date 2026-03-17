@@ -12,6 +12,8 @@ struct EngineSettingsSection: View {
         settingsCard("Engine") {
             TextField("whisper-cli path", text: $preferences.dictation.whisperCLIPath)
                 .textFieldStyle(.roundedBorder)
+                .font(.system(.body, design: .monospaced))
+                .truncationMode(.middle)
             if let error = whisperCLIPathError {
                 Text(error)
                     .font(StenoDesign.caption())
@@ -20,6 +22,8 @@ struct EngineSettingsSection: View {
 
             TextField("Model path", text: modelPathBinding)
                 .textFieldStyle(.roundedBorder)
+                .font(.system(.body, design: .monospaced))
+                .truncationMode(.middle)
             if let error = modelPathError {
                 Text(error)
                     .font(StenoDesign.caption())
@@ -38,6 +42,8 @@ struct EngineSettingsSection: View {
             if preferences.dictation.vadEnabled {
                 TextField("VAD model path", text: $preferences.dictation.vadModelPath)
                     .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .truncationMode(.middle)
                 if let error = vadModelPathError {
                     HStack(spacing: StenoDesign.xs) {
                         Image(systemName: "exclamationmark.triangle.fill")
