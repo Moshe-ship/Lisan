@@ -22,6 +22,9 @@ struct InsertionSettingsSection: View {
                 }
                 .onMove(perform: moveInsertionMethod)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(StenoDesign.surfaceSecondary)
             .frame(height: StenoDesign.insertionListHeight)
             .clipShape(RoundedRectangle(cornerRadius: StenoDesign.radiusSmall))
 
