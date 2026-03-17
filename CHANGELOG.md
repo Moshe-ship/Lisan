@@ -9,11 +9,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 - Settings cards now stretch to full width for consistent alignment across all sections.
+- Replaced the insertion priority drag list with a grouped container using compact reorder controls and internal dividers.
+- Cleanup style pickers now use a grid layout so all dropdown menus align to the same column.
 - Engine file-path fields use monospaced type with middle truncation for readability.
 - Tightened spacing between entry rows in word corrections and text shortcuts.
 - Grouped helper captions closer to their associated controls in recording and media sections.
-- Replaced the insertion priority list with individually styled reorder rows matching the rest of the settings card pattern.
-- Added dividers between cleanup style pickers for clearer visual grouping.
 - Added a divider above Save & Apply for clearer separation from settings content.
 
 ## [0.1.9] - 2026-03-11
