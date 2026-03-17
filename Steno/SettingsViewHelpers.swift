@@ -10,6 +10,7 @@ func settingsCard<Content: View>(_ title: String, @ViewBuilder content: () -> Co
             .accessibilityAddTraits(.isHeader)
         content()
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .cardStyle()
 }
 
@@ -31,6 +32,7 @@ func settingsCardWithSubtitle<Content: View>(
         }
         content()
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .cardStyle()
 }
 
