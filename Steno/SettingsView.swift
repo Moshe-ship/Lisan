@@ -28,15 +28,20 @@ struct SettingsView: View {
                 )
 
                 // Bottom actions
-                HStack(spacing: StenoDesign.sm) {
-                    Button("Save & Apply") {
-                        controller.applySettingsDraft(preferences: preferencesDraft)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(StenoDesign.accent)
+                VStack(spacing: StenoDesign.md) {
+                    Divider()
 
-                    Spacer()
+                    HStack(spacing: StenoDesign.sm) {
+                        Button("Save & Apply") {
+                            controller.applySettingsDraft(preferences: preferencesDraft)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(StenoDesign.accent)
+
+                        Spacer()
+                    }
                 }
+                .padding(.top, StenoDesign.sm)
             }
             .padding(.vertical, StenoDesign.lg)
         }
