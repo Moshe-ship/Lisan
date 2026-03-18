@@ -24,7 +24,7 @@ final class DictationController: ObservableObject {
     private let clipboardService = MacClipboardService()
     private let historyStore: HistoryStore
     private let hotkey: MacHotkeyMonitor
-    private let overlay: MacOverlayPresenter
+    private let overlay: WaveformOverlayPresenter
     private let mediaInterruption: MediaInterruptionService
     private let preferencesStore: AppPreferencesStore
     private let launchAtLoginService: LaunchAtLoginService
@@ -46,7 +46,7 @@ final class DictationController: ObservableObject {
 
     init(
         hotkey: MacHotkeyMonitor = MacHotkeyMonitor(),
-        overlay: MacOverlayPresenter = MacOverlayPresenter(),
+        overlay: WaveformOverlayPresenter = WaveformOverlayPresenter(),
         mediaInterruption: MediaInterruptionService = MacMediaInterruptionService(),
         preferencesStore: AppPreferencesStore = AppPreferencesStore(),
         launchAtLoginService: LaunchAtLoginService = LaunchAtLoginService()
@@ -468,7 +468,7 @@ final class DictationController: ObservableObject {
 
     private func dismissOverlaySoon() {
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
             overlay.hide()
         }
     }

@@ -52,6 +52,9 @@ public protocol HotkeyService: AnyObject {
 /// (e.g., AppKit floating panels on macOS).
 @MainActor
 public protocol OverlayPresenter: AnyObject {
+    /// Pre-creates the overlay window so the first `show` has no lazy-init stutter.
+    func prepareWindow()
+
     /// Shows the overlay with the given state.
     func show(state: OverlayState)
 
