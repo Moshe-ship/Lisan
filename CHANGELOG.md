@@ -5,18 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.10] - 2026-03-17
 
 ### Changed
 - Settings cards now stretch to full width for consistent alignment across all sections.
 - Replaced the insertion priority drag list with a grouped container using compact reorder controls and internal dividers.
-- Cleanup style pickers now use a grid layout so all dropdown menus align to the same column.
+- Cleanup style picker rows use fixed-width label columns for consistent alignment across all four pickers.
 - Engine file-path fields use monospaced type with middle truncation for readability.
 - Tightened spacing between entry rows in word corrections and text shortcuts.
 - Grouped helper captions closer to their associated controls in recording and media sections.
 - Added a divider above Save & Apply for clearer separation from settings content.
 - Recording mic button now uses a two-ring staggered ripple pulse, a softer diffuse glow shadow, and a larger button size to better fill the Record tab.
 - Mic button responds to presses with a spring scale-down for tactile feedback.
+- Replaced the classic status-dot overlay with a waveform capsule featuring animated frequency bars, gradient fills, layered shadows, and SF Symbol icons for terminal states.
+- Overlay auto-dismiss extended from 1.5 seconds to 2.0 seconds for better readability of result states.
+- Overlay entrance uses staggered bar scale-up and a staged text fade for smoother first-show animation.
+- Added a brief green background flash on successful text insertion for clearer confirmation feedback.
+- Removed the non-functional expand/collapse chevron from history transcript rows; tap the text directly to expand or collapse.
+- Global hands-free key picker now includes F1–F12 alongside the existing F13–F20 options, so MacBook users can assign their built-in function keys without an external keyboard.
+- Hands-free key picker sections labeled by keyboard type with updated setup guidance.
+- Onboarding feature tour now shows a generic hands-free setup tip instead of a hardcoded key name.
 
 ## [0.1.9] - 2026-03-11
 
