@@ -23,9 +23,9 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Lisan
       configs:
         Debug:
-          CODE_SIGN_ENTITLEMENTS: Steno/Steno.debug.entitlements
+          CODE_SIGN_ENTITLEMENTS: Steno/Lisan.debug.entitlements
         Release:
-          CODE_SIGN_ENTITLEMENTS: Steno/Steno.release.entitlements
+          CODE_SIGN_ENTITLEMENTS: Steno/Lisan.release.entitlements
           ENABLE_HARDENED_RUNTIME: YES
     dependencies:
       - package: StenoKit

@@ -50,6 +50,9 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Lint logging policy (LOGGING_POLICY.md)
+        run: ./scripts/lint-logging.sh
+
       - name: Run StenoKit tests
         env:
           CLANG_MODULE_CACHE_PATH: /tmp/steno-clang-cache

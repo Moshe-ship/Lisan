@@ -139,4 +139,141 @@ jobs:
           cat verify/zip.sha256 >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "All six gates passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "All six security gates passed." >> "$GITHUB_STEP_SUMMARY"
+
+  install-smoke:
+    # Install the released app into /Applications and validate structural
+    # sanity and actual launch. CI cannot grant TCC or type into apps, so
+    # this focuses on what IS verifiable non-interactively: bundle layout,
+    # Info.plist fields, codesign identity, that the binary actually
+    # executes for long enough to register a process (which exercises
+    # dyld + hardened runtime + notarization ticket loading).
+    needs: verify
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - name: Determine tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Download + unzip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir smoke && cd smoke
+          gh release download "${{ steps.tag.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "Lisan-*.zip"
+          unzip -q Lisan-*.zip
+
+      - name: Install to /Applications
+        run: |
+          set -euo pipefail
+          APP="$(find smoke -maxdepth 3 -name 'Lisan.app' | head -1)"
+          echo "Source bundle: $APP"
+          sudo rm -rf /Applications/Lisan.app
+          sudo cp -R "$APP" /Applications/Lisan.app
+          ls -ld /Applications/Lisan.app
+
+      - name: Bundle structure sanity
+        run: |
+          set -euo pipefail
+          APP=/Applications/Lisan.app
+          for p in \
+            "$APP/Contents/Info.plist" \
+            "$APP/Contents/MacOS" \
+            "$APP/Contents/_CodeSignature/CodeResources" \
+            "$APP/Contents/Resources"
+          do
+            if [ ! -e "$p" ]; then
+              echo "::error::Missing required bundle path: $p"
+              exit 1
+            fi
+          done
+          echo "bundle structure ✓"
+
+      - name: Info.plist field sanity
+        run: |
+          set -euo pipefail
+          APP=/Applications/Lisan.app
+          BID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Contents/Info.plist")
+          NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleName" "$APP/Contents/Info.plist")
+          DNAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP/Contents/Info.plist" 2>/dev/null || echo "")
+          MIC=$(/usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" "$APP/Contents/Info.plist")
+          echo "CFBundleIdentifier:        $BID"
+          echo "CFBundleName:              $NAME"
+          echo "CFBundleDisplayName:       $DNAME"
+          echo "NSMicrophoneUsageDescription: $MIC"
+          [ "$BID" = "io.lisanapp.lisan" ] || { echo "::error::Wrong bundle ID: $BID"; exit 1; }
+          [ "$NAME" = "Lisan" ] || { echo "::error::CFBundleName not 'Lisan': $NAME"; exit 1; }
+          echo "$MIC" | grep -qi "lisan" || { echo "::error::Mic description still references upstream name or is missing app identity"; exit 1; }
+
+      - name: Codesign identity sanity
+        run: |
+          set -euo pipefail
+          APP=/Applications/Lisan.app
+          INFO=$(codesign -dv --verbose=4 "$APP" 2>&1)
+          echo "$INFO"
+          echo "$INFO" | grep -qE "TeamIdentifier=VSL9H2F2D3" || {
+            echo "::error::Wrong TeamIdentifier — expected VSL9H2F2D3"; exit 1; }
+          echo "$INFO" | grep -qE "Identifier=io.lisanapp.lisan" || {
+            echo "::error::Wrong code signing Identifier"; exit 1; }
+
+      - name: Launch + exit loop (dyld + runtime + ticket smoke)
+        run: |
+          set -euo pipefail
+          APP=/Applications/Lisan.app
+          # Launch briefly and capture any immediate dyld/entitlement failure.
+          # We don't need to interact — we just need to confirm the binary
+          # gets through dyld, hardened-runtime checks, notarization ticket
+          # validation, and reaches its first runloop tick without crashing.
+          "$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")" &
+          PID=$!
+          # Give it 3 seconds to either crash immediately or stay up.
+          for i in 1 2 3; do
+            sleep 1
+            if ! kill -0 "$PID" 2>/dev/null; then
+              wait "$PID" 2>/dev/null || RC=$?
+              echo "::error::Process exited within 3s (pid=$PID, rc=${RC:-?}) — smoke failed"
+              exit 1
+            fi
+          done
+          # Clean kill. If this throws, the app didn't own its PID anyway.
+          kill "$PID" 2>/dev/null || true
+          wait "$PID" 2>/dev/null || true
+          echo "launch smoke ✓ (stayed up 3s)"
+
+      - name: Bundle size sanity
+        run: |
+          set -euo pipefail
+          SIZE=$(du -sk /Applications/Lisan.app | awk '{print $1}')
+          echo "Bundle size: ${SIZE}KB"
+          # Reasonable bounds: not empty, not absurd. Current v0.2.x is ~3MB
+          # because Whisper/models/packs live outside the bundle. Hard ceiling
+          # at 50MB so a future accidental bloat (e.g., bundling a model)
+          # shows up as a failing smoke before it ships.
+          if [ "$SIZE" -lt 500 ]; then echo "::error::Bundle suspiciously small"; exit 1; fi
+          if [ "$SIZE" -gt 51200 ]; then echo "::error::Bundle suspiciously large (>50MB)"; exit 1; fi
+          echo "size ✓"
+
+      - name: Summary
+        run: |
+          echo "## Install smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- bundle structure ✓" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Info.plist fields ✓" >> "$GITHUB_STEP_SUMMARY"
+          echo "- codesign identity ✓" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 3-second launch loop ✓" >> "$GITHUB_STEP_SUMMARY"
+          echo "- bundle size ✓" >> "$GITHUB_STEP_SUMMARY"

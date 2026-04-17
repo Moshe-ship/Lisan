@@ -5,13 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-04-17
+
+### Added
+- `scripts/lint-logging.sh` — enforces `LOGGING_POLICY.md` by grepping for
+  Logger / `print` / `NSLog` calls that reference user-content variable
+  names (text, phrase, vocabulary, lexicon, transcript, prompt, audioURL,
+  etc.) without `privacy: .private` or `.sensitive`. Also bans `NSLog`
+  entirely (no privacy API).
+- CI lint job: `.github/workflows/swift-tests.yml` now runs
+  `scripts/lint-logging.sh` on every push and PR. Logging policy
+  violations fail the build.
+- Install-smoke job added to `.github/workflows/verify-release.yml`:
+  after the six security gates pass, the job copies the released
+  `Lisan.app` into `/Applications`, sanity-checks the bundle structure,
+  verifies Info.plist fields (bundle ID, CFBundleName, mic usage
+  description), confirms codesign TeamIdentifier + Identifier match
+  expected values, launches the binary for 3 seconds to exercise dyld
+  + hardened runtime + notarization ticket loading without requiring
+  interactive TCC approval, and checks bundle size stays within bounds
+  (500KB–50MB) so a future accidental model bundle blows the smoke,
+  not the user's disk.
+- End-to-end automated release pipeline: the 5 secrets required by
+  `.github/workflows/release.yml` are now configured on the repo
+  (`APPLE_DEVELOPER_ID_P12_BASE64`, `APPLE_DEVELOPER_ID_P12_PASSWORD`,
+  `APPLE_NOTARY_APPLE_ID`, `APPLE_NOTARY_PASSWORD`,
+  `APPLE_NOTARY_TEAM_ID`). Pushing a `v*` tag now triggers a full
+  build → sign → notarize → staple → package → publish cycle on
+  `macos-latest` without any local action.
+
+### Renamed
+- `Steno/Steno.debug.entitlements` → `Steno/Lisan.debug.entitlements`
+- `Steno/Steno.release.entitlements` → `Steno/Lisan.release.entitlements`
+- `project.yml` and `scripts/package-release.sh` reference the new paths.
+- Deeper renames (Xcode target `Steno` → `Lisan`, source dir `Steno/` →
+  `Lisan/`, scheme, `Contents/MacOS/Steno` → `Contents/MacOS/Lisan`)
+  intentionally deferred — they break the upstream-merge lane with
+  `Ankit-Cherian/steno`. Planned for v0.3.0 as a dedicated rename release
+  with a migration note.
+
+### Migration notes
+No preferences schema or behavior changes. Projects that included
+`Steno/Steno.*.entitlements` in a script need to update the path to
+`Steno/Lisan.*.entitlements`.
+
 ## [0.2.2] - 2026-04-17
 
 ### Security
 - Logger subsystems renamed from `io.stenoapp.*` to `io.lisanapp.*` so log
   attribution matches the app identity. Privacy qualifiers (`.private` on
   paths, `.public` on counts) preserved.
-- Entitlements split into `Steno.debug.entitlements` and `Steno.release.entitlements`
+- Entitlements split into `Lisan.debug.entitlements` and `Lisan.release.entitlements`
   with per-configuration wiring in `project.yml`. Debug-only signing
   relaxations can no longer leak into Release builds.
 - Release entitlements unchanged (still `device.audio-input` only).

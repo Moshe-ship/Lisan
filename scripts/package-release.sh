@@ -67,7 +67,7 @@ echo "==> Override CFBundleName to Lisan"
 
 echo "==> Sign with Developer ID + hardened runtime + timestamp"
 codesign --force --deep --options runtime --timestamp \
-  --entitlements "$REPO_DIR/Steno/Steno.release.entitlements" \
+  --entitlements "$REPO_DIR/Steno/Lisan.release.entitlements" \
   --sign "$SIGNING_IDENTITY" \
   "$APP_DST"
 
