@@ -44,9 +44,11 @@ mkdir -p "$STAGE_DIR/vendor/whisper.cpp/build/bin" \
          "$STAGE_DIR/packs"
 
 echo "==> xcodegen generate"
-(cd "$REPO_DIR" && xcodegen generate >/dev/null)
+(cd "$REPO_DIR" && xcodegen generate)
 
 echo "==> xcodebuild Release (ad-hoc first; we re-sign with Developer ID below)"
+# Do NOT redirect to /dev/null — we want compile errors visible in CI logs
+# so a Release-only regression is diagnosable without re-running the build.
 xcodebuild \
   -project "$REPO_DIR/Steno.xcodeproj" \
   -scheme Steno \
@@ -56,7 +58,7 @@ xcodebuild \
   CODE_SIGN_IDENTITY=- \
   CODE_SIGNING_REQUIRED=NO \
   CODE_SIGNING_ALLOWED=NO \
-  build >/dev/null
+  build
 
 APP_SRC="$BUILD_DIR/Build/Products/Release/Steno.app"
 APP_DST="$STAGE_DIR/Lisan.app"
