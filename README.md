@@ -200,6 +200,15 @@ and ready; run `xcodebuild` on a machine with Xcode.
 
 4. **Microphone permission** — Required for recording. Prompt shown on first launch.
 
+## Release verification
+
+Every release asset is Developer-ID signed, Apple-notarized, ticket-stapled,
+and has its entitlements reduced to `audio-input` only. See
+[RELEASE_VERIFICATION.md](RELEASE_VERIFICATION.md) for the six-command audit
+cycle you can run against any published zip. `scripts/package-release.sh`
+runs the same checks as a self-test before emitting the final zip — so
+the manual audit and the build use the same definition of green.
+
 ## Transcript examples
 
 ### Verified (real whisper-cli, JFK audio sample)
