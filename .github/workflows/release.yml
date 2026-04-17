@@ -1,0 +1,128 @@
+# Build, sign, notarize, staple, package, and publish a Lisan release.
+#
+# Requires these repository secrets (configure in GitHub → Settings → Secrets):
+#
+#   APPLE_DEVELOPER_ID_P12_BASE64    Base64 of your Developer ID Application .p12
+#   APPLE_DEVELOPER_ID_P12_PASSWORD  Password that unlocks the .p12
+#   APPLE_NOTARY_APPLE_ID            Apple ID email for notarytool
+#   APPLE_NOTARY_PASSWORD            App-specific password (xxxx-xxxx-xxxx-xxxx)
+#   APPLE_NOTARY_TEAM_ID             Developer team ID (e.g. VSL9H2F2D3)
+#
+# Trigger: push a tag `v*` (e.g. `git tag v0.3.0 && git push --tags`).
+#
+# This workflow runs `scripts/package-release.sh` which has a self-verify
+# pass built in — if any gate fails the build fails, so no bad artifact
+# can be uploaded.
+#
+# The separate `verify-release.yml` workflow then runs on the published
+# release and re-validates the uploaded asset from the download path a
+# user would take. Two independent verifications.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (no leading v), e.g. 0.3.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-sign-notarize-publish:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "push" ]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="${{ inputs.version }}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Building Lisan v$V"
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Import Developer ID certificate
+        env:
+          P12_B64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$P12_B64" ]; then
+            echo "::error::APPLE_DEVELOPER_ID_P12_BASE64 secret missing"
+            exit 1
+          fi
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$P12_B64" | base64 -d > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -k "$KEYCHAIN" -P "$P12_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security find-identity -v -p codesigning
+
+      - name: Store notary credentials
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.APPLE_NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.APPLE_NOTARY_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          xcrun notarytool store-credentials "lisan-notary" \
+            --apple-id "$NOTARY_APPLE_ID" \
+            --password "$NOTARY_PASSWORD" \
+            --team-id "$NOTARY_TEAM_ID"
+
+      - name: Prereq — vendored whisper.cpp
+        run: |
+          set -euo pipefail
+          # CI release prereq: the release zip bundles a pre-built whisper-cli
+          # and models under ~/vendor/whisper.cpp. Build them here on the
+          # runner so package-release.sh finds them.
+          mkdir -p "$HOME/vendor"
+          git clone --depth 1 --branch v1.8.3 https://github.com/ggerganov/whisper.cpp "$HOME/vendor/whisper.cpp"
+          (cd "$HOME/vendor/whisper.cpp" && cmake -B build -DGGML_METAL=1 && cmake --build build --config Release -j 4)
+          (cd "$HOME/vendor/whisper.cpp/models" && ./download-ggml-model.sh base)
+          (cd "$HOME/vendor/whisper.cpp/models" && ./download-vad-model.sh silero-v6.2.0)
+
+      - name: Package release (build → sign → notarize → staple → self-verify)
+        run: |
+          set -euo pipefail
+          ./scripts/package-release.sh "${{ steps.version.outputs.version }}"
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          V="${{ steps.version.outputs.version }}"
+          ZIP="release-stage/Lisan-v${V}.zip"
+          gh release upload "v${V}" "$ZIP" \
+            --repo "${{ github.repository }}" \
+            --clobber
+
+      - name: Summary
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          ZIP="release-stage/Lisan-v${V}.zip"
+          echo "## Release v${V} published" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          shasum -a 256 "$ZIP" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

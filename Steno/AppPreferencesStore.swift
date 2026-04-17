@@ -4,7 +4,7 @@ import OSLog
 actor AppPreferencesStore {
     private let storageURL: URL
     private var hasPreparedStorageDirectory = false
-    private static let logger = Logger(subsystem: "io.stenoapp.steno", category: "AppPreferencesStore")
+    private static let logger = Logger(subsystem: "io.lisanapp.lisan", category: "AppPreferencesStore")
 
     init(storageURL: URL = AppPreferencesStore.defaultStorageURL()) {
         self.storageURL = storageURL

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		Debug entitlements — local development only.
+
+		Must stay a SUPERSET of Release entitlements (never remove an
+		entitlement Release relies on). Additions here are safe only in
+		Debug configuration because project.yml wires this file
+		exclusively to Debug via CODE_SIGN_ENTITLEMENTS.
+
+		Current contents are identical to Release. When adding debug-only
+		helpers (e.g., allow-jit for LLDB injection on a future engine
+		experiment) add them HERE only, never in Release.
+	-->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+</dict>
+</plist>

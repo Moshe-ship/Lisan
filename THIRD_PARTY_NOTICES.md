@@ -1,8 +1,47 @@
 # Third-Party Notices
 
+Lisan is a fork of [Steno](https://github.com/Ankit-Cherian/steno) with Arabic
+and bilingual dictation extensions. This file records the licenses of the
+upstream project and any third-party code bundled or invoked by Lisan.
+
+## Steno (upstream)
+
+Lisan is forked from [Ankit-Cherian/steno](https://github.com/Ankit-Cherian/steno).
+The entire insertion, recording, and session-coordination layer is unchanged
+from upstream; see `README.md` for the exact list of modified files.
+
+Steno is licensed under the MIT License:
+
+```text
+MIT License
+
+Copyright (c) 2026 Ankit Cherian
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## whisper.cpp
 
-Steno uses [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for local speech-to-text transcription.
+Lisan invokes [whisper.cpp](https://github.com/ggerganov/whisper.cpp) as a
+subprocess for local speech-to-text transcription. whisper.cpp is not
+statically linked or redistributed — Lisan calls the user-installed
+`whisper-cli` binary via `Process`.
 
 whisper.cpp is licensed under the MIT License:
 

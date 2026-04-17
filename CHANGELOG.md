@@ -5,6 +5,107 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-04-17
+
+### Security
+- Logger subsystems renamed from `io.stenoapp.*` to `io.lisanapp.*` so log
+  attribution matches the app identity. Privacy qualifiers (`.private` on
+  paths, `.public` on counts) preserved.
+- Entitlements split into `Steno.debug.entitlements` and `Steno.release.entitlements`
+  with per-configuration wiring in `project.yml`. Debug-only signing
+  relaxations can no longer leak into Release builds.
+- Release entitlements unchanged (still `device.audio-input` only).
+
+### Added
+- `RELEASE_VERIFICATION.md` — six-command post-release audit cycle.
+- `LOGGING_POLICY.md` — what Lisan is allowed to log, what it never logs,
+  OSLog subsystem map, audit grep.
+- `SMOKE_TEST.md` — seven-item post-install behavior checklist.
+- `.github/workflows/verify-release.yml` — CI job downloads the latest
+  release asset and runs the six gates on every `release: published`.
+- `.github/workflows/release.yml` — documented secrets-gated release
+  pipeline (build → sign → notarize → staple → package → publish).
+
+### Changed
+- `THIRD_PARTY_NOTICES.md` now explicitly credits upstream Steno and
+  Ankit Cherian's MIT license alongside whisper.cpp.
+- `LICENSE` carries both copyright lines (Lisan fork + upstream Steno).
+
+### Migration notes
+No preferences schema changes from v0.2.1. Console.app filters previously
+set against `io.stenoapp.*` should be updated to `io.lisanapp.*`.
+
+## [0.2.1] - 2026-04-17
+
+### Security
+- Production-distribution-grade release: Developer ID Application signing
+  (Team `VSL9H2F2D3`), Apple-notarized with ticket stapled, hardened
+  runtime, timestamped. `spctl -a -vv` reports
+  `accepted, source=Notarized Developer ID`.
+- Removed `com.apple.security.cs.allow-dyld-environment-variables`
+  entitlement. Was inherited from upstream; allowed DYLD_* env injection
+  which weakens the hardened runtime. Release entitlements reduced to
+  `com.apple.security.device.audio-input` only.
+- Release asset re-packaged with `ditto -c -k --sequesterRsrc --keepParent`
+  so AppleDouble xattr metadata no longer scatters as `._*` companions
+  inside the bundle on plain `unzip`. This was the bug in the first v0.2.1
+  artifact that failed `codesign --verify --deep --strict` on reviewers'
+  machines.
+- `scripts/package-release.sh` codifies the full build → sign → notarize
+  → staple → package flow with a mandatory self-verify pass before
+  emitting the zip. Packaging regressions now fail the build, not the
+  audit.
+
+### Changed
+- `LaunchAtLoginService` inspects `SMAppService.mainApp.status` on failure
+  and surfaces actionable errors (`.requiresApproval` → open Login Items
+  pane; `.notFound` → install in `/Applications`). Previously just the
+  opaque `Operation not permitted`.
+
+### Migration notes
+First release signed with Developer ID. Upgrading from v0.2.0 triggers
+one re-prompt for Microphone / Accessibility / Input Monitoring because
+the signing identity changed. Future rebuilds signed with the same cert
+preserve TCC grants.
+
+## [0.2.0] - 2026-04-17
+
+### Added
+- Arabic cleanup layer in StenoKit:
+  - `BilingualSentenceSplitter` tags chunks `.arabic` / `.english` /
+    `.mixed` / `.other` by Unicode letter ratio.
+  - `ArabicNormalizer` — toggleable transforms (harakat, tatweel, alef,
+    ya, ta marbuta, waw-hamza, digit conversion). Ported from Aamil's
+    `ArabicSearchNormalizer`, re-scoped for dictation.
+  - `ArabicPunctuator` — ASCII `,` `;` `?` → Arabic `،` `؛` `؟` inside
+    Arabic chunks only; English chunks untouched.
+  - `BilingualCleanupEngine` wraps base `CleanupEngine`, routes per-chunk.
+    Fast-paths to base when no Arabic detected (zero English-only cost).
+- Vocabulary pack loader accepts a directory; reads every `.txt`
+  alphabetically, dedupes, joins with spaces. `#` comments ignored.
+- Six seed packs in `packs/`: `msa-business`, `khaleeji-common`,
+  `shami-common`, `saudi-places`, `gcc-brands`, `agency-bilingual`.
+- Arabic settings section with live preview, grouped toggles (always-safe
+  vs advanced), and digit-mode picker.
+- Language-mode picker copy rewritten so users understand Auto picks one
+  language per recording, not per word.
+
+### Changed
+- Full Steno → Lisan rename of user-facing strings: menu bar, onboarding,
+  permissions panel, window title, `CFBundleName`, `CFBundleDisplayName`,
+  mic usage description. Internal identifiers (StenoKit Swift package,
+  target name, source directory) preserved.
+
+### Tests
+- 179/179 passing. 74 new tests across the Arabic layer + vocab loader.
+
+### Migration notes
+First Lisan release forked from Steno. Preferences schema adds
+`dictation.languageMode`, `dictation.vocabularyFilePath`,
+`dictation.bilingualCleanupEnabled`, `dictation.arabicOptions`, and
+`dictation.arabicPunctuationEnabled` — all with backwards-compatible
+defaults via `decodeIfPresent`.
+
 ## [0.1.10] - 2026-03-17
 
 ### Changed
