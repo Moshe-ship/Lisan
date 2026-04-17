@@ -13,7 +13,7 @@ targets:
       - path: Steno
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.stenoapp.steno
+        PRODUCT_BUNDLE_IDENTIFIER: io.lisanapp.lisan
         # Contributor-first signing defaults:
         # - no fixed team ID in tracked source
         # - each contributor chooses their own team in local Xcode settings

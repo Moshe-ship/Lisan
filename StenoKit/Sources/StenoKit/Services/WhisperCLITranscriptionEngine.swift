@@ -37,10 +37,21 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
     private let config: Configuration
     /// Cached at init to avoid copying ProcessInfo.environment + stat() calls per transcription.
     private let cachedEnvironment: [String: String]
+    /// Vocabulary file loaded once at init. One phrase per line, used as a
+    /// transcription prompt/hint to bias recognition toward custom terms.
+    private let vocabularyText: String?
 
-    public init(config: Configuration) {
+    public init(config: Configuration, vocabularyFileURL: URL? = nil) {
         self.config = config
         self.cachedEnvironment = Self.buildProcessEnvironment(config: config)
+        self.vocabularyText = vocabularyFileURL.flatMap { url -> String? in
+            guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+            return text
+                .components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+        }
     }
 
     public func transcribe(audioURL: URL, languageHints: [String]) async throws -> RawTranscript {
@@ -62,9 +73,20 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
             "-nt"
         ]
 
+        // Determine language: explicit hint wins; auto mode passes nothing (whisper auto-detects)
         if let firstHint = languageHints.first,
-           let languageCode = normalizeLanguage(from: firstHint) {
+           let mode = LanguageMode(rawValue: firstHint.lowercased()),
+           let langArg = mode.whisperLanguageArg {
+            args.append(contentsOf: ["-l", langArg])
+        } else if let firstHint = languageHints.first,
+                  firstHint.lowercased() != "auto",
+                  let languageCode = normalizeLanguage(from: firstHint) {
             args.append(contentsOf: ["-l", languageCode])
+        }
+
+        // Vocabulary file: pass as --prompt to bias recognition toward custom terms
+        if let vocab = vocabularyText, !vocab.isEmpty {
+            args.append(contentsOf: ["--prompt", vocab])
         }
 
         args.append(contentsOf: config.additionalArguments)
@@ -96,14 +118,15 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
 
     private func normalizeLanguage(from hint: String) -> String? {
         let lower = hint.lowercased()
-        if lower == "en-us" || lower == "en" {
+        if lower == "en-us" || lower == "en" || lower == "english" {
             return "en"
         }
-
+        if lower == "ar" || lower == "ar-eg" || lower == "arabic" {
+            return "ar"
+        }
         if lower.contains("-") {
             return String(lower.split(separator: "-").first ?? "")
         }
-
         return lower.isEmpty ? nil : lower
     }
 

@@ -600,12 +600,19 @@ private struct DictationRuntimeFactory {
             vadModelPath: snapshot.dictation.vadModelPath
         )
 
+        let vocabURL: URL? = {
+            let p = snapshot.dictation.vocabularyFilePath
+            guard !p.isEmpty else { return nil }
+            return URL(fileURLWithPath: p)
+        }()
+
         return WhisperCLITranscriptionEngine(
             config: .init(
                 whisperCLIPath: whisperCLIPath,
                 modelPath: modelPath,
                 additionalArguments: extraArgs
-            )
+            ),
+            vocabularyFileURL: vocabURL
         )
     }
 

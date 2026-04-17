@@ -43,13 +43,28 @@ struct AppPreferences: Codable, Sendable, Equatable {
         var threadCount: Int
         var vadEnabled: Bool
         var vadModelPath: String
+        /// Primary dictation language: en, ar, or auto.
+        var languageMode: LanguageMode
+        /// Path to a plain-text vocabulary file (one phrase per line). Used to
+        /// bias recognition toward custom terms, brand names, and transliterations.
+        var vocabularyFilePath: String
 
-        init(whisperCLIPath: String, modelPath: String, threadCount: Int, vadEnabled: Bool = true, vadModelPath: String? = nil) {
+        init(
+            whisperCLIPath: String,
+            modelPath: String,
+            threadCount: Int,
+            vadEnabled: Bool = true,
+            vadModelPath: String? = nil,
+            languageMode: LanguageMode = .auto,
+            vocabularyFilePath: String = ""
+        ) {
             self.whisperCLIPath = whisperCLIPath
             self.modelPath = modelPath
             self.threadCount = threadCount
             self.vadEnabled = vadEnabled
             self.vadModelPath = vadModelPath ?? WhisperRuntimeConfiguration.defaultVADModelPath(relativeTo: modelPath)
+            self.languageMode = languageMode
+            self.vocabularyFilePath = vocabularyFilePath
         }
 
         init(from decoder: Decoder) throws {
@@ -60,6 +75,8 @@ struct AppPreferences: Codable, Sendable, Equatable {
             vadEnabled = try container.decodeIfPresent(Bool.self, forKey: .vadEnabled) ?? true
             let savedVAD = try container.decodeIfPresent(String.self, forKey: .vadModelPath)
             vadModelPath = savedVAD ?? WhisperRuntimeConfiguration.defaultVADModelPath(relativeTo: modelPath)
+            languageMode = try container.decodeIfPresent(LanguageMode.self, forKey: .languageMode) ?? .auto
+            vocabularyFilePath = try container.decodeIfPresent(String.self, forKey: .vocabularyFilePath) ?? ""
         }
 
         mutating func updateModelPath(_ newModelPath: String) {
@@ -129,8 +146,10 @@ struct AppPreferences: Codable, Sendable, Equatable {
             ),
             dictation: .init(
                 whisperCLIPath: "\(vendorRoot)/build/bin/whisper-cli",
-                modelPath: "\(vendorRoot)/models/ggml-small.en.bin",
-                threadCount: 6
+                modelPath: "\(vendorRoot)/models/ggml-base.bin",
+                threadCount: 6,
+                languageMode: .auto,
+                vocabularyFilePath: ""
             ),
             insertion: .init(orderedMethods: [.direct, .accessibility, .clipboardPaste]),
             media: .init(pauseDuringHandsFree: true, pauseDuringPressToTalk: true),

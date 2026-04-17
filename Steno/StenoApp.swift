@@ -7,7 +7,7 @@ struct StenoApp: App {
     @StateObject private var controller = DictationController()
 
     var body: some Scene {
-        WindowGroup("Steno") {
+        WindowGroup("Lisan") {
             Group {
                 if !controller.hasBootstrapped {
                     StenoDesign.background

@@ -65,7 +65,7 @@ public actor SessionCoordinator {
         return sessionID
     }
 
-    public func stopPressToTalk(sessionID: SessionID, languageHints: [String] = ["en-US"]) async throws -> InsertResult {
+    public func stopPressToTalk(sessionID: SessionID, languageMode: LanguageMode = .auto) async throws -> InsertResult {
         // Remove session before the first await so actor reentrancy cannot process
         // the same session twice while transcription/cleanup are in flight.
         guard let active = activeSessions.removeValue(forKey: sessionID) else {
@@ -74,7 +74,7 @@ public actor SessionCoordinator {
 
         let audioURL = try await captureService.endCapture(sessionID: sessionID)
         defer { try? FileManager.default.removeItem(at: audioURL) }
-        var rawTranscript = try await transcriptionEngine.transcribe(audioURL: audioURL, languageHints: languageHints)
+        var rawTranscript = try await transcriptionEngine.transcribe(audioURL: audioURL, languageHints: [languageMode.rawValue])
 
         if rawTranscript.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return InsertResult(status: .noSpeech, method: .none, insertedText: "")

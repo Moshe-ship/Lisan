@@ -1,5 +1,33 @@
 import Foundation
 
+// MARK: - Language Mode
+
+/// Primary dictation language. Used as a hint to the transcription engine.
+public enum LanguageMode: String, Sendable, Codable, Equatable, CaseIterable {
+    case en = "en"
+    case ar = "ar"
+    case auto = "auto"
+
+    public var displayName: String {
+        switch self {
+        case .en:    return "English"
+        case .ar:    return "Arabic"
+        case .auto:  return "Auto-detect"
+        }
+    }
+
+    /// whisper.cpp language code: nil for auto, explicit code otherwise.
+    var whisperLanguageArg: String? {
+        switch self {
+        case .en:   return "en"
+        case .ar:   return "ar"
+        case .auto: return nil
+        }
+    }
+}
+
+// MARK: - Style Tone
+
 public enum StyleTone: String, Sendable, Codable, Equatable, CaseIterable {
     case natural
     case professional
