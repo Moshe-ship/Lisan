@@ -13,7 +13,7 @@ final class MenuBarController: NSObject {
         if let button = item.button {
             button.image = NSImage(
                 systemSymbolName: "mic.circle",
-                accessibilityDescription: "Steno"
+                accessibilityDescription: "Lisan"
             )
             button.image?.isTemplate = true
             button.target = self
@@ -35,7 +35,7 @@ final class MenuBarController: NSObject {
             symbolName = "mic.circle"
         }
 
-        let description = isRecording ? "Steno recording" : (handsFreeOn ? "Steno hands-free" : "Steno")
+        let description = isRecording ? "Lisan recording" : (handsFreeOn ? "Lisan hands-free" : "Lisan")
         button.image = NSImage(
             systemSymbolName: symbolName,
             accessibilityDescription: description

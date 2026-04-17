@@ -148,7 +148,7 @@ struct OnboardingView: View {
                     .foregroundStyle(StenoDesign.textPrimary)
                     .accessibilityAddTraits(.isHeader)
 
-                Text("Steno needs a few permissions to work properly.")
+                Text("Lisan needs a few permissions to work properly.")
                     .font(StenoDesign.subheadline())
                     .foregroundStyle(StenoDesign.textSecondary)
             }
@@ -164,7 +164,7 @@ struct OnboardingView: View {
 
                 PermissionStatusCard(
                     title: "Accessibility",
-                    description: "Lets Steno type or paste into the app you're using.",
+                    description: "Lets Lisan type or paste into the app you're using.",
                     status: controller.accessibilityPermissionStatus,
                     onRequest: { controller.requestAccessibilityPermission() },
                     onOpenSettings: { controller.openAccessibilitySettings() }
@@ -172,7 +172,7 @@ struct OnboardingView: View {
 
                 PermissionStatusCard(
                     title: "Input Monitoring",
-                    description: "Lets Steno detect global hotkeys while other apps are focused.",
+                    description: "Lets Lisan detect global hotkeys while other apps are focused.",
                     status: controller.inputMonitoringPermissionStatus,
                     onRequest: { controller.requestInputMonitoringPermission() },
                     onOpenSettings: { controller.openInputMonitoringSettings() }

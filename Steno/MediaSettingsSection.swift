@@ -10,7 +10,7 @@ struct MediaSettingsSection: View {
             VStack(alignment: .leading, spacing: StenoDesign.xxs) {
                 Toggle("Pause music/video during hands-free dictation",
                        isOn: $preferences.media.pauseDuringHandsFree)
-                Text("Steno only sends play/pause when playback is clearly active.")
+                Text("Lisan only sends play/pause when playback is clearly active.")
                     .font(StenoDesign.caption())
                     .foregroundStyle(StenoDesign.textSecondary)
                     .padding(.leading, StenoDesign.xxs)

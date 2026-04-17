@@ -48,6 +48,15 @@ struct AppPreferences: Codable, Sendable, Equatable {
         /// Path to a plain-text vocabulary file (one phrase per line). Used to
         /// bias recognition toward custom terms, brand names, and transliterations.
         var vocabularyFilePath: String
+        /// Turn Arabic-aware cleanup on or off. When on, the pipeline splits
+        /// bilingual transcripts and runs Arabic normalization + punctuation
+        /// on Arabic sentences while leaving English sentences to the base
+        /// engine. Fast-paths to base when no Arabic is detected.
+        var bilingualCleanupEnabled: Bool
+        /// Per-transform toggles for Arabic normalization. See ArabicNormalizationOptions.
+        var arabicOptions: ArabicNormalizationOptions
+        /// Convert ASCII `,` `;` `?` to Arabic `،` `؛` `؟` inside Arabic chunks.
+        var arabicPunctuationEnabled: Bool
 
         init(
             whisperCLIPath: String,
@@ -56,7 +65,10 @@ struct AppPreferences: Codable, Sendable, Equatable {
             vadEnabled: Bool = true,
             vadModelPath: String? = nil,
             languageMode: LanguageMode = .auto,
-            vocabularyFilePath: String = ""
+            vocabularyFilePath: String = "",
+            bilingualCleanupEnabled: Bool = true,
+            arabicOptions: ArabicNormalizationOptions = .default,
+            arabicPunctuationEnabled: Bool = true
         ) {
             self.whisperCLIPath = whisperCLIPath
             self.modelPath = modelPath
@@ -65,6 +77,9 @@ struct AppPreferences: Codable, Sendable, Equatable {
             self.vadModelPath = vadModelPath ?? WhisperRuntimeConfiguration.defaultVADModelPath(relativeTo: modelPath)
             self.languageMode = languageMode
             self.vocabularyFilePath = vocabularyFilePath
+            self.bilingualCleanupEnabled = bilingualCleanupEnabled
+            self.arabicOptions = arabicOptions
+            self.arabicPunctuationEnabled = arabicPunctuationEnabled
         }
 
         init(from decoder: Decoder) throws {
@@ -77,6 +92,9 @@ struct AppPreferences: Codable, Sendable, Equatable {
             vadModelPath = savedVAD ?? WhisperRuntimeConfiguration.defaultVADModelPath(relativeTo: modelPath)
             languageMode = try container.decodeIfPresent(LanguageMode.self, forKey: .languageMode) ?? .auto
             vocabularyFilePath = try container.decodeIfPresent(String.self, forKey: .vocabularyFilePath) ?? ""
+            bilingualCleanupEnabled = try container.decodeIfPresent(Bool.self, forKey: .bilingualCleanupEnabled) ?? true
+            arabicOptions = try container.decodeIfPresent(ArabicNormalizationOptions.self, forKey: .arabicOptions) ?? .default
+            arabicPunctuationEnabled = try container.decodeIfPresent(Bool.self, forKey: .arabicPunctuationEnabled) ?? true
         }
 
         mutating func updateModelPath(_ newModelPath: String) {

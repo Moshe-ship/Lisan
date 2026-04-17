@@ -18,6 +18,7 @@ struct SettingsView: View {
                     controller: controller
                 )
                 LanguageSettingsSection(preferences: $preferencesDraft)
+                ArabicSettingsSection(preferences: $preferencesDraft)
                 InsertionSettingsSection(preferences: $preferencesDraft)
                 MediaSettingsSection(preferences: $preferencesDraft)
                 LexiconSettingsSection(preferences: $preferencesDraft)

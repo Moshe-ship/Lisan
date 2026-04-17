@@ -1,0 +1,122 @@
+# Digital marketing / ad agency vocabulary (AR + EN).
+# Every day phrases agency people dictate into reports, briefs, and slack.
+
+# Campaign types
+حملة
+حملة إعلانية
+حملة تسويقية
+campaign
+Google Ads
+Meta Ads
+Facebook Ads
+Instagram Ads
+TikTok Ads
+Snap Ads
+YouTube Ads
+LinkedIn Ads
+X Ads
+Twitter Ads
+Programmatic
+Display
+Search
+Performance Max
+Smart Shopping
+App Campaign
+
+# Metrics
+CTR
+CPC
+CPM
+CPA
+CPL
+ROI
+ROAS
+AOV
+LTV
+Conversion Rate
+Bounce Rate
+Impressions
+Clicks
+Reach
+Engagement
+Impressions ظهور
+Clicks نقرات
+Conversions تحويلات
+Leads عملاء محتملين
+Traffic زيارات
+Sessions جلسات
+Pageviews مشاهدات صفحة
+Bounce ارتداد
+
+# SEO
+SEO
+تحسين محركات البحث
+Keyword
+كلمة مفتاحية
+Backlink
+روابط خلفية
+On-page
+Off-page
+Technical SEO
+Content SEO
+Local SEO
+SERP
+Search Volume
+Keyword Difficulty
+Domain Authority
+Page Authority
+Core Web Vitals
+
+# Content
+Blog post
+مقالة
+محتوى
+Content
+Copy
+Caption
+كابشن
+هاشتاق
+Hashtag
+Reel
+Story
+قصة
+منشور
+Post
+Thread
+ثريد
+Carousel
+Infographic
+
+# Reporting
+تقرير شهري
+تقرير أسبوعي
+Monthly Report
+Weekly Report
+KPI
+Performance
+الأداء
+Benchmark
+Comparison
+Y-o-Y
+M-o-M
+Quarter
+ربع
+Budget
+ميزانية
+Spend
+Remaining
+المتبقي
+Forecast
+توقعات
+
+# Brands (common user-specific)
+Performance MAX
+Yalla Ads
+Nashir
+Hurmoz
+Tarminal
+Aamil
+Lisan
+Mousa Abumazin
+مؤسسة ماجنا
+AI Saudi

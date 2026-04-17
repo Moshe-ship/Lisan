@@ -14,15 +14,14 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.lisanapp.lisan
-        # Contributor-first signing defaults:
-        # - no fixed team ID in tracked source
-        # - each contributor chooses their own team in local Xcode settings
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: Apple Development
         CODE_SIGN_ENTITLEMENTS: Steno/Steno.entitlements
         SWIFT_VERSION: 6.0
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: Steno needs microphone access for dictation.
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Lisan needs microphone access for dictation.
+        INFOPLIST_KEY_CFBundleName: Lisan
+        INFOPLIST_KEY_CFBundleDisplayName: Lisan
       configs:
         Release:
           ENABLE_HARDENED_RUNTIME: YES

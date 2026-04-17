@@ -617,7 +617,15 @@ private struct DictationRuntimeFactory {
     }
 
     func makeCleanupEngine() -> any CleanupEngine {
-        RuleBasedCleanupEngine()
+        let base = RuleBasedCleanupEngine()
+        guard snapshot.dictation.bilingualCleanupEnabled else {
+            return base
+        }
+        return BilingualCleanupEngine(
+            base: base,
+            options: snapshot.dictation.arabicOptions,
+            arabicPunctuationEnabled: snapshot.dictation.arabicPunctuationEnabled
+        )
     }
 
     func makeInsertionTransports() -> [any InsertionTransport] {

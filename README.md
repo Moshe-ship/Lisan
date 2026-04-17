@@ -25,8 +25,12 @@ SessionCoordinator
     │        ▼
     │    RawTranscript
     │
-    ├──► CleanupEngine (RuleBasedCleanupEngine)
+    ├──► CleanupEngine (BilingualCleanupEngine → RuleBasedCleanupEngine)
     │    │
+    │    │  BilingualSentenceSplitter tags each chunk as arabic/english/mixed/other.
+    │    │  Arabic chunks → ArabicNormalizer → ArabicPunctuator.
+    │    │  English / mixed chunks → base RuleBasedCleanupEngine (English rules).
+    │    │  Fast path: no Arabic detected → skip split, base engine handles whole input.
     │    ▼
     │  CleanTranscript
     │
@@ -73,10 +77,49 @@ preferences.dictation.languageMode
 
 `normalizeLanguage()` also handles: `en-US`, `ar-EG`, `arabic`, `english` as aliases.
 
-## Vocabulary file
+## Arabic cleanup layer
 
-A plain-text file, one phrase per line. Loaded once at engine init.
-Phrases are joined with spaces and passed to whisper-cli as `--prompt "phrase1 phrase2 ..."`.
+Lisan ships four composable services that turn Whisper's raw Arabic output into
+clean written prose, routed per-sentence so mixed-language transcripts aren't
+corrupted by English-only rules:
+
+| Service                        | Role                                                                 |
+|--------------------------------|----------------------------------------------------------------------|
+| `BilingualSentenceSplitter`    | Tags sentence chunks as `.arabic` / `.english` / `.mixed` / `.other` |
+| `ArabicNormalizer`             | User-toggleable transforms (harakat, tatweel, alef, ya, digits...)   |
+| `ArabicPunctuator`             | Converts `,` → `،`, `;` → `؛`, `?` → `؟` inside Arabic chunks only   |
+| `BilingualCleanupEngine`       | Wraps a base engine, routes per-chunk, joins results                 |
+
+All four are pure, `Sendable`, unit-tested (179/179 suite), zero-cost fast-path
+when the transcript contains no Arabic.
+
+### Normalization toggles
+
+Default-on (always-safe):
+- Strip harakat (ً ٌ ٍ َ ُ ِ ّ ْ)
+- Strip tatweel (ـ)
+- Unify hamza-on-alef (أ إ آ ٱ → ا)
+
+Default-off (change meaning — opt in per dialect):
+- Unify ya (ى ئ → ي)
+- Fold teh marbuta (ة → ه)
+- Fold waw-with-hamza (ؤ → و)
+- Digits to ASCII (٠-٩ → 0-9) or to Arabic-Indic (0-9 → ٠-٩)
+
+Live preview in Settings → Arabic shows every transform's effect on a sample.
+
+## Vocabulary file or directory
+
+A plain-text file, one phrase per line, loaded once at engine init. Lines
+starting with `#` are comments, blank lines ignored, phrases deduped.
+
+**Point Lisan at a directory and it reads every `.txt` file inside**, sorted
+alphabetically — layer multiple vocabulary packs (MSA business, Khaleeji,
+Shami, Saudi places, GCC brands, agency-bilingual) without merging them by
+hand. See [`packs/README.md`](packs/README.md) for included packs.
+
+The concatenated phrases are joined with spaces and passed to whisper-cli as
+`--prompt "phrase1 phrase2 ..."` to bias recognition.
 
 ```
 # ~/.lisan/vocabulary.txt
@@ -126,8 +169,8 @@ ask what you can do for your country.
 ### StenoKit (core engine)
 
 ```
-swift build  → Build complete! (28s, 51 targets, 0 errors, 0 warnings)
-swift test   → 105/105 tests passed (4 new tests for LanguageMode + vocabulary)
+swift build  → Build complete! (0 errors, 0 warnings)
+swift test   → 179/179 tests passed (74 new tests across Arabic layer + vocab loader)
 ```
 
 No Xcode required. `swift build` compiles all engine, service, and model code.

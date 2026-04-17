@@ -1,0 +1,86 @@
+# GCC consumer, telecom, banking, retail brands.
+# Brand names and product names are high-value for prompt biasing —
+# Whisper transliterates them inconsistently without a hint.
+
+# Telecom
+STC
+Mobily
+Zain
+Saudi Telecom
+اتصالات
+دو
+du
+Ooredoo
+Virgin Mobile
+Lebara
+
+# Banking
+الراجحي
+الأهلي
+سامبا
+الرياض
+البلاد
+الجزيرة
+البنك السعودي الفرنسي
+ساب
+SABB
+Al Rajhi Bank
+Saudi National Bank
+Riyad Bank
+Alinma
+Emirates NBD
+Mashreq
+Qatar National Bank
+Kuwait Finance House
+
+# Retail / e-commerce
+نون
+Noon
+Amazon.sa
+Jarir
+جرير
+Extra
+Carrefour
+Hyperpanda
+Danube
+Tamimi
+Othaim
+
+# Food / QSR
+Jollibee
+Albaik
+البيك
+Herfy
+هرفي
+Shake Shack
+AlTazaj
+التزج
+Kudu
+كودو
+Shawarmer
+
+# Government / services
+Absher
+أبشر
+Tawakkalna
+توكلنا
+Sehhaty
+صحتي
+Qiwa
+قوى
+Muqeem
+مقيم
+Etimad
+اعتماد
+
+# Automotive
+Toyota
+Lexus
+Nissan
+Hyundai
+Kia
+Geely
+MG
+Lucid
+مرسيدس
+BMW

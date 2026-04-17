@@ -21,6 +21,15 @@ struct LanguageSettingsSection: View {
                     .font(StenoDesign.caption())
                     .foregroundStyle(StenoDesign.textSecondary)
 
+                HStack(alignment: .top, spacing: StenoDesign.xs) {
+                    Image(systemName: "info.circle")
+                        .font(StenoDesign.caption())
+                        .foregroundStyle(StenoDesign.textSecondary)
+                    Text("Auto chooses one language per recording, not per word. For mixed Arabic + English, Auto picks the dominant language of each press-to-talk session.")
+                        .font(StenoDesign.caption())
+                        .foregroundStyle(StenoDesign.textSecondary)
+                }
+
                 Divider()
 
                 Text("Vocabulary file")
@@ -55,11 +64,11 @@ struct LanguageSettingsSection: View {
     private var languageDescription: String {
         switch preferences.dictation.languageMode {
         case .en:
-            return "English-only dictation. Best accuracy for English audio."
+            return "Forces English. Best for English-only speech. Arabic audio in this mode will produce garbage output."
         case .ar:
-            return "Arabic-only dictation. Best accuracy for Arabic audio."
+            return "Forces Arabic. Best for Arabic-only speech. English audio in this mode will produce garbage output."
         case .auto:
-            return "Auto-detects the spoken language. Slightly lower accuracy than explicit mode."
+            return "Recommended for bilingual or mixed speech. Slightly lower per-language accuracy than forcing a single language."
         }
     }
 }

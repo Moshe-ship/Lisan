@@ -44,14 +44,53 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
     public init(config: Configuration, vocabularyFileURL: URL? = nil) {
         self.config = config
         self.cachedEnvironment = Self.buildProcessEnvironment(config: config)
-        self.vocabularyText = vocabularyFileURL.flatMap { url -> String? in
-            guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-            return text
-                .components(separatedBy: .newlines)
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-                .joined(separator: " ")
+        self.vocabularyText = Self.loadVocabulary(at: vocabularyFileURL)
+    }
+
+    /// Loads vocabulary phrases from either a single text file or a directory.
+    ///
+    /// Accepting a directory lets users layer multiple "packs" (msa-business,
+    /// khaleeji-common, saudi-places, gcc-brands, their own custom files) by
+    /// pointing Lisan at a folder. All `.txt` files are read alphabetically,
+    /// trimmed, de-duplicated, and joined with spaces.
+    ///
+    /// Comments starting with `#` are ignored.
+    static func loadVocabulary(at url: URL?) -> String? {
+        guard let url else { return nil }
+
+        var files: [URL] = []
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else {
+            return nil
         }
+
+        if isDir.boolValue {
+            let contents = (try? FileManager.default.contentsOfDirectory(
+                at: url,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )) ?? []
+            files = contents
+                .filter { $0.pathExtension.lowercased() == "txt" }
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        } else {
+            files = [url]
+        }
+
+        var seen = Set<String>()
+        var phrases: [String] = []
+        for file in files {
+            guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
+            for rawLine in text.components(separatedBy: .newlines) {
+                let line = rawLine.trimmingCharacters(in: .whitespaces)
+                if line.isEmpty || line.hasPrefix("#") { continue }
+                if seen.insert(line).inserted {
+                    phrases.append(line)
+                }
+            }
+        }
+
+        return phrases.isEmpty ? nil : phrases.joined(separator: " ")
     }
 
     public func transcribe(audioURL: URL, languageHints: [String]) async throws -> RawTranscript {

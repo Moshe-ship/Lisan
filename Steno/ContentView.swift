@@ -17,7 +17,7 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Header bar
             HStack(spacing: StenoDesign.lg) {
-                Text("Steno")
+                Text("Lisan")
                     .font(StenoDesign.heading1())
                     .foregroundStyle(StenoDesign.textPrimary)
                     .accessibilityAddTraits(.isHeader)
