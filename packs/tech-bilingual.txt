@@ -1,0 +1,161 @@
+# Tech / software vocabulary. Bilingual because dev teams code-switch.
+
+# Engineering workflow
+pull request
+merge request
+code review
+pair programming
+rubber duck
+debugger
+breakpoint
+stack trace
+null pointer
+race condition
+deadlock
+memory leak
+segfault
+
+# Infrastructure
+Kubernetes
+k8s
+Docker
+container
+image registry
+helm chart
+sidecar
+pod
+namespace
+cluster
+node
+ingress
+service mesh
+Istio
+Linkerd
+Prometheus
+Grafana
+Loki
+Jaeger
+
+# Cloud
+AWS
+EC2
+S3
+RDS
+Lambda
+CloudFront
+Route 53
+IAM
+VPC
+SQS
+SNS
+DynamoDB
+GCP
+BigQuery
+Firestore
+Cloud Run
+Cloud Functions
+Pub/Sub
+Azure
+CosmosDB
+App Service
+DigitalOcean
+Hetzner
+Fly.io
+Cloudflare
+R2
+
+# Backend
+REST
+GraphQL
+gRPC
+WebSocket
+OAuth
+JWT
+TLS
+mTLS
+rate limiting
+circuit breaker
+retry budget
+idempotency key
+event sourcing
+CQRS
+saga
+outbox
+
+# Data
+PostgreSQL
+MySQL
+MariaDB
+SQLite
+MongoDB
+Redis
+Elasticsearch
+Cassandra
+Clickhouse
+DuckDB
+Supabase
+PlanetScale
+Neon
+Turso
+
+# Frontend
+React
+Next.js
+Nuxt
+Svelte
+SvelteKit
+Vue
+Astro
+SolidJS
+Qwik
+TypeScript
+Tailwind
+shadcn
+
+# Languages and runtimes
+Rust
+Go
+Kotlin
+Scala
+Haskell
+OCaml
+Elixir
+Erlang
+Python
+Ruby
+Crystal
+Zig
+Deno
+Bun
+
+# AI / ML
+LLM
+embedding
+vector database
+RAG
+fine-tune
+LoRA
+QLoRA
+quantization
+Ollama
+MLX
+llama.cpp
+whisper.cpp
+transformers
+tokenizer
+context window
+KV cache
+prompt injection
+jailbreak
+hallucination
+alignment
+
+# Arabic AI / community
+الذكاء الاصطناعي
+نموذج لغوي
+توليد نصوص
+تصنيف نصوص
+تعلم آلي
+تعلم عميق
+رؤية حاسوبية
+معالجة اللغة الطبيعية

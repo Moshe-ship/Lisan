@@ -28,6 +28,7 @@ final class DictationController: ObservableObject {
     private let mediaInterruption: MediaInterruptionService
     private let preferencesStore: AppPreferencesStore
     private let launchAtLoginService: LaunchAtLoginService
+    let telemetry: DiagnosticsTelemetry = DiagnosticsTelemetry(storage: FileDiagnosticsStorage())
 
     private var lexiconService: PersonalLexiconService
     private var styleProfileService: StyleProfileService
@@ -81,6 +82,19 @@ final class DictationController: ObservableObject {
                 self?.hotkeyRegistrationMessage = reason
                 self?.overlay.show(state: .failure(message: reason))
                 self?.dismissOverlaySoon()
+                // Telemetry: the reason string is a system-generated diagnostic
+                // from MacHotkeyMonitor (e.g., "Accessibility permission required")
+                // and contains no user content. Map the condition to a bounded code.
+                if let self = self {
+                    Task { [telemetry = self.telemetry] in
+                        await telemetry.record(.startupFailure(
+                            phase: .hotkeyRegistration,
+                            errorCode: reason.lowercased().contains("permission")
+                                ? .inputSystemUnavailable
+                                : .hotkeyTaken
+                        ))
+                    }
+                }
             }
         }
         hotkey.start()

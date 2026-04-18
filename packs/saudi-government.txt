@@ -1,0 +1,81 @@
+# Saudi government apps, agencies, and services.
+# Whisper mis-transcribes these consistently; the prompt hint restores them.
+
+# Identity / residency / visa
+أبشر
+Absher
+مقيم
+Muqeem
+توكلنا
+Tawakkalna
+سهل
+Sahel
+نفاذ
+Nafath
+مدد
+Mudad
+قوى
+Qiwa
+أجير
+Ajeer
+اعتماد
+Etimad
+تم
+Tamm
+واصل
+Wasel
+صحة
+Seha
+صحتي
+Sehhaty
+موعد
+Mawid
+
+# Ministries and agencies
+وزارة الداخلية
+وزارة الموارد البشرية
+وزارة الصحة
+وزارة التعليم
+وزارة التجارة
+وزارة المالية
+وزارة الشؤون البلدية والقروية والإسكان
+هيئة الغذاء والدواء السعودية
+SFDA
+الهيئة العامة للزكاة والضريبة والجمارك
+ZATCA
+هيئة السوق المالية
+CMA
+البنك المركزي السعودي
+SAMA
+الهيئة السعودية للبيانات والذكاء الاصطناعي
+SDAIA
+الهيئة العامة للاستثمار
+MISA
+الهيئة العامة للسياحة
+MOT
+الهيئة العامة للترفيه
+GEA
+هيئة المدن الصناعية ومناطق التقنية
+MODON
+مدينة الملك عبدالعزيز للعلوم والتقنية
+KACST
+
+# Programs / initiatives
+رؤية ٢٠٣٠
+Vision 2030
+نيوم
+NEOM
+البحر الأحمر
+The Red Sea
+القدية
+Qiddiya
+الدرعية
+Diriyah
+العلا
+AlUla
+روشن
+Roshn
+سدايا
+SDAIA
+مسك
+Misk

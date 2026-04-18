@@ -17,14 +17,18 @@ Lines starting with `#` are comments.
 
 ## Included packs
 
-| File                   | Content                                         |
-|------------------------|-------------------------------------------------|
-| `msa-business.txt`     | Modern Standard Arabic business / office terms  |
-| `khaleeji-common.txt`  | Khaleeji (Gulf) dialect staples                 |
-| `shami-common.txt`     | Levantine (Shami) dialect staples               |
-| `saudi-places.txt`     | Saudi cities, districts, landmarks              |
-| `gcc-brands.txt`       | Common GCC consumer / telecom / banking brands  |
-| `agency-bilingual.txt` | Digital-marketing / agency vocabulary (AR + EN) |
+| File                     | Content                                                     |
+|--------------------------|-------------------------------------------------------------|
+| `msa-business.txt`       | Modern Standard Arabic business / office terms              |
+| `khaleeji-common.txt`    | Khaleeji (Gulf) dialect staples                             |
+| `shami-common.txt`       | Levantine (Shami) dialect staples                           |
+| `saudi-places.txt`       | Saudi cities, districts, landmarks                          |
+| `gcc-brands.txt`         | Common GCC consumer / telecom / banking brands              |
+| `agency-bilingual.txt`   | Digital-marketing / agency vocabulary (AR + EN)             |
+| `saudi-government.txt`   | Government apps, agencies, Vision 2030 programs             |
+| `medical-arabic.txt`     | Clinical terms for doctors / nurses / pharmacists           |
+| `tech-bilingual.txt`     | Software / infra / AI vocabulary for dev teams (AR + EN)    |
+| `islamic-terms.txt`      | Religious vocabulary: prayer times, surah names, dhikr      |
 
 ## Writing your own pack
 

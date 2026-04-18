@@ -190,4 +190,53 @@ struct BilingualSentenceSplitterTests {
         let chunks = s.split("Lisan transcript with one word كلمة.")
         #expect(chunks[0].language == .english)
     }
+
+    // MARK: - Non-linguistic runs
+
+    @Test("Arabic sentence with embedded URL stays .arabic")
+    func arabicWithURL() {
+        let s = BilingualSentenceSplitter()
+        // Without URL stripping, this would flip to .mixed because the URL
+        // has many Latin letters. With stripping, only the Arabic word ratio matters.
+        let chunks = s.split("زوروا https://lisan.app/docs لمعرفة المزيد عن لسان.")
+        #expect(chunks.count == 1)
+        #expect(chunks[0].language == .arabic)
+        // Original text preserved — URL is only excluded from CLASSIFICATION.
+        #expect(chunks[0].text.contains("https://lisan.app/docs"))
+    }
+
+    @Test("Arabic sentence with embedded email stays .arabic")
+    func arabicWithEmail() {
+        let s = BilingualSentenceSplitter()
+        let chunks = s.split("راسلوني على mousa@example.com لأي استفسار.")
+        #expect(chunks[0].language == .arabic)
+    }
+
+    @Test("Arabic sentence with hashtag stays .arabic")
+    func arabicWithHashtag() {
+        let s = BilingualSentenceSplitter()
+        let chunks = s.split("منشور جديد حول #AISaudi شكراً للجميع.")
+        #expect(chunks[0].language == .arabic)
+    }
+
+    @Test("Arabic sentence with @mention stays .arabic")
+    func arabicWithMention() {
+        let s = BilingualSentenceSplitter()
+        let chunks = s.split("شكراً @NousResearch على الدعم المستمر للعرب.")
+        #expect(chunks[0].language == .arabic)
+    }
+
+    @Test("English sentence with an Arabic-in-URL doesn't break classification")
+    func englishWithArabicParam() {
+        let s = BilingualSentenceSplitter()
+        let chunks = s.split("See the page at https://example.com/?q=مرحبا for details.")
+        #expect(chunks[0].language == .english)
+    }
+
+    @Test("URL-only content classifies as .other, not .english")
+    func urlOnly() {
+        let s = BilingualSentenceSplitter()
+        let chunks = s.split("https://github.com/Moshe-ship/Lisan")
+        #expect(chunks[0].language == .other)
+    }
 }

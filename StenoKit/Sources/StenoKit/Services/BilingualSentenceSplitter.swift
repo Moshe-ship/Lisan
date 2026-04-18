@@ -68,9 +68,11 @@ public struct BilingualSentenceSplitter: Sendable {
         var chunks: [LanguageChunk] = []
         var current = ""
 
-        for scalar in text.unicodeScalars {
+        let scalars = Array(text.unicodeScalars)
+        for (i, scalar) in scalars.enumerated() {
             current.unicodeScalars.append(scalar)
-            if Self.isSentenceTerminator(scalar) {
+            let next = i + 1 < scalars.count ? scalars[i + 1] : nil
+            if Self.isSentenceTerminator(scalar, nextScalar: next) {
                 if !current.isEmpty {
                     chunks.append(classify(current))
                     current = ""
@@ -111,10 +113,15 @@ public struct BilingualSentenceSplitter: Sendable {
     // MARK: - Classification
 
     private func classify(_ sentence: String) -> LanguageChunk {
+        // Strip URL / email / hashtag / mention runs before counting letters
+        // so an Arabic sentence with one embedded https://... doesn't flip
+        // to .mixed just because its Latin letter count exploded.
+        let stripped = Self.stripNonLinguisticRuns(sentence)
+
         var arabicLetters = 0
         var latinLetters = 0
 
-        for scalar in sentence.unicodeScalars {
+        for scalar in stripped.unicodeScalars {
             if Self.isArabicLetter(scalar) { arabicLetters += 1 }
             else if Self.isLatinLetter(scalar) { latinLetters += 1 }
         }
@@ -136,17 +143,49 @@ public struct BilingualSentenceSplitter: Sendable {
         return LanguageChunk(text: sentence, language: .mixed)
     }
 
+    /// Remove character runs that aren't natural-language content:
+    /// URLs (`https?://...`), email addresses, hashtags (`#foo`), and
+    /// at-mentions (`@user`). Language classification should be based
+    /// on actual words, not technical tokens that happen to use Latin
+    /// letters. The returned string is only used for counting — the
+    /// original chunk text is preserved for joining back together.
+    private static func stripNonLinguisticRuns(_ text: String) -> String {
+        // URLs: http(s)://... up to whitespace
+        let urlPattern = #"https?://\S+"#
+        // Emails: user@host.tld
+        let emailPattern = #"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#
+        // Hashtags and mentions at the start of a token
+        let hashMentionPattern = #"(?:^|\s)[#@][A-Za-z0-9_]+"#
+
+        var working = text
+        for pattern in [urlPattern, emailPattern, hashMentionPattern] {
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let range = NSRange(working.startIndex..<working.endIndex, in: working)
+                working = regex.stringByReplacingMatches(in: working, range: range, withTemplate: " ")
+            }
+        }
+        return working
+    }
+
     // MARK: - Unicode ranges
 
-    /// Sentence terminators that end a chunk. Arabic and Latin full-stops,
-    /// question marks, exclamation, and newlines.
-    private static func isSentenceTerminator(_ scalar: Unicode.Scalar) -> Bool {
+    /// Sentence terminators that end a chunk. `.` is context-sensitive —
+    /// it only ends a sentence when followed by whitespace or end-of-string
+    /// so URLs, emails, decimals, and abbreviations stay in one chunk.
+    /// Other terminators (`!`, `?`, Arabic `؟`, Urdu `۔`, newline) always end.
+    private static func isSentenceTerminator(_ scalar: Unicode.Scalar, nextScalar: Unicode.Scalar?) -> Bool {
         switch scalar {
-        case ".", "!", "?",
+        case "!", "?",
              "\u{06D4}", // ۔ Arabic full stop (Urdu/Persian)
              "\u{061F}", // ؟ Arabic question mark
              "\n":
             return true
+        case ".":
+            // Only a terminator if followed by whitespace or string end.
+            // Keeps URLs (lisan.app), emails (foo@bar.com), decimals (2.5),
+            // and abbreviations (Mr. Smith — accepts the false merge) intact.
+            guard let next = nextScalar else { return true }
+            return CharacterSet.whitespacesAndNewlines.contains(next)
         default:
             return false
         }

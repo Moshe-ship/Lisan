@@ -5,6 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-04-18
+
+Four post-v0.2.3 reviewer improvements, delivered in one release.
+
+### Added
+
+**Product telemetry (content-leak-proof by types)**
+- New `StenoKit/Services/DiagnosticsTelemetry.swift`: an actor-backed,
+  file-persisted ring buffer of `DiagnosticEvent`s. The event enum is
+  a closed sum type — every payload is a bounded enum or a sanitized
+  controlled string (`TargetBundleID`, `PathKind`). There is no case
+  that accepts free-form text. Transcript content, audio buffers, and
+  vocabulary-file contents cannot be logged through this API; you would
+  have to change the type definition to do it.
+- Covered categories: startup failures, insertion failures, model-not-
+  found, engine errors, permission denials, config validation errors,
+  notarization mismatch.
+- `FileDiagnosticsStorage` appends JSON-lines to
+  `~/Library/Application Support/Lisan/diagnostics.jsonl`, capacity-
+  capped at 200 events in-memory.
+- New `Steno/DiagnosticsSettingsSection.swift`: Settings → Diagnostics
+  view with per-event summary, category icons, copy-for-support button,
+  and clear-all. Empty state reassures the user that nothing sensitive
+  is collected.
+- 13 new tests covering record/read/clear, capacity FIFO, bundle-id
+  sanitization (rejects spaces, Arabic, emoji, HTML, truncates at 128),
+  home-directory redaction in `PathKind`, file round-trip, corrupt-line
+  resilience, Codable round-trip, and a type-level content-leak invariant
+  that lists every existing case so a new one without a sanitized payload
+  can't slip in unreviewed.
+- `DictationController` wires one initial telemetry callsite (hotkey
+  registration failure) to prove the end-to-end; more sites will be
+  wired as we instrument the pipeline.
+
+**Latency benchmark**
+- New `scripts/benchmark-latency.sh`: measures whisper-cli wall-clock
+  time per `(model, language-mode)` combination across N runs, emits
+  markdown + JSON reports with p50 / p95 / min / max. Answers "how fast"
+  without claiming to answer "how accurate" — accuracy lives in
+  StenoBenchmarkCLI. Reference run on JFK sample / ggml-base / 3 runs
+  shows ~585 ms p50 across en / ar / auto (language hint has no latency
+  cost, only accuracy implications).
+
+**Real-usage validation harness**
+- New `scripts/validation-harness.sh`: drives a reproducible validation
+  pass across TextEdit, Notes, Terminal, iTerm2, Messages, Telegram,
+  Claude, Safari — three language modes each — and records human
+  pass/fail into a timestamped markdown report. Honestly manual
+  (microphone + human judgment can't be scripted) but the structure is
+  the audit artifact.
+
+**Bilingual splitter: URL / email / hashtag / mention awareness**
+- `BilingualSentenceSplitter.classify` now strips URL, email, hashtag,
+  and `@mention` runs before counting Latin letters, so an Arabic
+  sentence with one embedded URL doesn't flip to `.mixed`.
+- `BilingualSentenceSplitter.split` now treats `.` as a sentence
+  terminator only when followed by whitespace or end-of-string.
+  URLs (`lisan.app`), emails (`mousa@example.com`), and decimals (`2.5`)
+  stay in a single chunk. 6 new tests cover these cases plus the
+  "URL-only content is `.other`, not `.english`" edge case.
+
+**Four more vocabulary packs**
+- `packs/saudi-government.txt` — Absher, Tawakkalna, SFDA, ZATCA, SDAIA,
+  MISA, Vision 2030, NEOM, Qiddiya, Diriyah, Roshn, Misk, etc.
+- `packs/medical-arabic.txt` — specialties, conditions, procedures,
+  anatomy, common clinical phrases.
+- `packs/tech-bilingual.txt` — Kubernetes, GraphQL, LLM / embedding /
+  RAG / quantization / MLX / whisper.cpp, and Arabic AI terminology.
+- `packs/islamic-terms.txt` — greetings, prayer times, surah names, the
+  short Juz Amma surahs, core Islamic concepts (iman, taqwa, sabr, etc).
+- `packs/README.md` updated to list the full 10-pack catalog.
+
+### Tests
+198/198 passing (was 179).
+
+### Migration notes
+- Existing preferences.json is forward-compatible.
+- `DiagnosticsTelemetry` lazy-creates its file on first use; no
+  migration needed.
+- Splitter API shape unchanged; callers see improved classification
+  with no code changes.
+
 ## [0.2.3] - 2026-04-17
 
 ### Added

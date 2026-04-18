@@ -28,6 +28,7 @@ struct SettingsView: View {
                     preferences: $preferencesDraft,
                     launchAtLoginWarning: controller.launchAtLoginWarning
                 )
+                DiagnosticsSettingsSection(telemetry: controller.telemetry)
 
                 // Bottom actions
                 VStack(spacing: StenoDesign.md) {
