@@ -1,4 +1,5 @@
 import AppKit
+import StenoKit
 import SwiftUI
 
 @MainActor
@@ -67,9 +68,24 @@ final class MenuBarController: NSObject {
 
         let menu = NSMenu()
 
-        let showItem = NSMenuItem(title: "Show Steno", action: #selector(showWindowAction), keyEquivalent: "")
+        let showItem = NSMenuItem(title: "Show Lisan", action: #selector(showWindowAction), keyEquivalent: "")
         showItem.target = self
         menu.addItem(showItem)
+
+        menu.addItem(.separator())
+
+        // Read-only status rows so users can glance at what's loaded
+        // without opening the window.
+        if let modelLabel = modelStatusLabel() {
+            let item = NSMenuItem(title: modelLabel, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        }
+        if let languageLabel = languageStatusLabel() {
+            let item = NSMenuItem(title: languageLabel, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        }
 
         menu.addItem(.separator())
 
@@ -80,7 +96,7 @@ final class MenuBarController: NSObject {
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "Quit Steno", action: #selector(quitAction), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit Lisan", action: #selector(quitAction), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -99,5 +115,22 @@ final class MenuBarController: NSObject {
 
     @objc private func quitAction() {
         NSApp.terminate(nil)
+    }
+
+    private func modelStatusLabel() -> String? {
+        guard let path = controller?.preferences.dictation.modelPath,
+              !path.isEmpty else {
+            return nil
+        }
+        if let entry = WhisperModelCatalog.entry(forModelPath: path) {
+            return "Model: \(entry.displayName)"
+        }
+        let filename = (path as NSString).lastPathComponent
+        return filename.isEmpty ? nil : "Model: \(filename)"
+    }
+
+    private func languageStatusLabel() -> String? {
+        guard let mode = controller?.preferences.dictation.languageMode else { return nil }
+        return "Language: \(mode.displayName)"
     }
 }
