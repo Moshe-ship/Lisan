@@ -10,6 +10,10 @@ struct EngineSettingsSection: View {
 
     var body: some View {
         settingsCard("Engine") {
+            ModelPickerView(preferences: $preferences)
+
+            Divider()
+
             TextField("whisper-cli path", text: $preferences.dictation.whisperCLIPath)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.body, design: .monospaced))
