@@ -642,6 +642,25 @@ final class DictationController: ObservableObject {
                     self.status = "Pruned \(result.prunedCount) transcript \(word) per your retention setting."
                 }
             }
+            // Persistence-off flip that actually deleted a file: emit the
+            // audit event the Diagnostics UI's .disablePersistenceClearedFile
+            // row was always designed to show. Nil = no file on disk to
+            // start with (e.g. persistence was already off); skip.
+            if let clearedCount = result.clearedOnDiskCount {
+                await telemetry.record(.historyPruned(
+                    count: clearedCount,
+                    trigger: .disablePersistenceClearedFile
+                ))
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if clearedCount > 0 {
+                        let word = clearedCount == 1 ? "entry" : "entries"
+                        self.status = "Cleared on-disk history (\(clearedCount) \(word) kept in memory only)."
+                    } else {
+                        self.status = "On-disk history file removed."
+                    }
+                }
+            }
             if result.hadError {
                 await telemetry.record(.persistenceFailure(target: .transcriptHistory))
                 await MainActor.run { [weak self] in

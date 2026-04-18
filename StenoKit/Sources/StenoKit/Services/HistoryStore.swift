@@ -30,19 +30,33 @@ public struct HistoryPreferences: Sendable, Equatable {
     }
 }
 
-/// Structured result of an `applyPreferences` call. Non-zero
-/// `prunedCount` means the caller may want to surface a status message
-/// ("Pruned N old entries"). `persistError` is non-nil when the on-disk
-/// write failed — callers that care about durability can log or retry;
-/// callers that don't can ignore it. Replaces the old asymmetry where
-/// some persist paths propagated errors and others swallowed them
-/// silently.
+/// Structured result of an `applyPreferences` call.
+///
+/// - `prunedCount`: entries removed by a retention-shortening step.
+///   Callers typically surface this as "Pruned N entries".
+/// - `clearedOnDiskCount`: non-nil when the user flipped persistence
+///   off and the on-disk history file actually contained entries at
+///   that moment. The value is the in-memory entry count at the time
+///   of the flip (a faithful proxy for what was on disk immediately
+///   before, since memory and disk are kept in sync). Entries stay
+///   alive in memory; only the file is gone. This is the audit hook
+///   the Diagnostics UI's `.disablePersistenceClearedFile` row needs.
+/// - `persistError`: non-nil when the on-disk write failed. Callers
+///   that care about durability can log or retry; others can ignore.
+///   Replaces the prior asymmetry where some persist paths propagated
+///   errors and others swallowed them silently.
 public struct HistoryApplyResult: Sendable {
     public let prunedCount: Int
+    public let clearedOnDiskCount: Int?
     public let persistError: Error?
 
-    public init(prunedCount: Int, persistError: Error?) {
+    public init(
+        prunedCount: Int,
+        clearedOnDiskCount: Int? = nil,
+        persistError: Error? = nil
+    ) {
         self.prunedCount = prunedCount
+        self.clearedOnDiskCount = clearedOnDiskCount
         self.persistError = persistError
     }
 
@@ -92,24 +106,40 @@ public actor HistoryStore: HistoryStoreProtocol {
     @discardableResult
     public func setPersistOnDisk(_ value: Bool) async -> HistoryApplyResult {
         guard persistOnDisk != value else {
-            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+            return HistoryApplyResult(prunedCount: 0)
         }
         persistOnDisk = value
         if !value {
+            // Count what was on disk before removing, so the caller can
+            // emit a meaningful audit event ("N entries were on disk,
+            // now kept only in memory"). Memory is the source of truth
+            // for what WAS on disk because memory and disk are kept in
+            // sync on every append.
+            ensureLoaded()
+            let fileExisted = FileManager.default.fileExists(atPath: storageURL.path)
+            let clearedCount = fileExisted ? entries.count : 0
             do {
                 try FileManager.default.removeItem(at: storageURL)
             } catch CocoaError.fileNoSuchFile {
-                // Already gone; not an error.
+                // Already gone; not an error. fileExisted will be false
+                // above, so clearedOnDiskCount stays nil (below).
             } catch {
                 return HistoryApplyResult(prunedCount: 0, persistError: error)
             }
             hasPreparedStorageDirectory = false
-            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+            // clearedOnDiskCount: nil means "no file to clear"; non-nil
+            // (including 0) means "the flip actually removed a file".
+            // We only want to surface the diagnostic when something was
+            // actually on disk — otherwise the event is noise.
+            return HistoryApplyResult(
+                prunedCount: 0,
+                clearedOnDiskCount: fileExisted ? clearedCount : nil
+            )
         }
         // Flipping back on — write whatever we have in memory.
         do {
             try persist()
-            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+            return HistoryApplyResult(prunedCount: 0)
         } catch {
             return HistoryApplyResult(prunedCount: 0, persistError: error)
         }
@@ -130,12 +160,12 @@ public actor HistoryStore: HistoryStoreProtocol {
     public func setRetentionDays(_ value: Int) async -> HistoryApplyResult {
         let clamped = max(1, value)
         guard retentionDays != clamped else {
-            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+            return HistoryApplyResult(prunedCount: 0)
         }
         let isTighter = clamped < retentionDays
         retentionDays = clamped
         guard isTighter else {
-            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+            return HistoryApplyResult(prunedCount: 0)
         }
         ensureLoaded()
         let before = entries.count
@@ -143,7 +173,7 @@ public actor HistoryStore: HistoryStoreProtocol {
         let pruned = before - entries.count
         do {
             try persist()
-            return HistoryApplyResult(prunedCount: pruned, persistError: nil)
+            return HistoryApplyResult(prunedCount: pruned)
         } catch {
             // In-memory pruning already happened. The disk write failed,
             // so disk still holds the wider window. We surface the error
@@ -163,10 +193,12 @@ public actor HistoryStore: HistoryStoreProtocol {
     public func applyPreferences(_ prefs: HistoryPreferences) async -> HistoryApplyResult {
         let persistResult = await setPersistOnDisk(prefs.persistOnDisk)
         let retentionResult = await setRetentionDays(prefs.retentionDays)
-        // Merge: sum prune counts, keep first error (persist error
-        // dominates if both failed).
+        // Merge: sum prune counts, carry through the clearedOnDiskCount
+        // from the persistence flip (only setPersistOnDisk can populate
+        // it), keep first error (persist error dominates if both failed).
         return HistoryApplyResult(
             prunedCount: persistResult.prunedCount + retentionResult.prunedCount,
+            clearedOnDiskCount: persistResult.clearedOnDiskCount,
             persistError: persistResult.persistError ?? retentionResult.persistError
         )
     }

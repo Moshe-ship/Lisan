@@ -359,6 +359,68 @@ func historyLegacyPruneCount() async throws {
     #expect(second == 0, "Counter should reset after first consume")
 }
 
+@Test("Observability: flipping persistOnDisk off reports clearedOnDiskCount")
+func historyFlippingOffReportsClearedCount() async throws {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("history-flip-count-\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let store = HistoryStore(
+        storageURL: tmp,
+        clipboardService: StubClipboardService(),
+        maxEntries: 500,
+        persistOnDisk: true,
+        retentionDays: 30
+    )
+
+    // Seed 3 entries, all in-window — they are on disk before the flip.
+    for i in 0..<3 {
+        try await store.append(entry: TranscriptEntry(
+            id: UUID(),
+            createdAt: Date(),
+            appBundleID: "com.flip.\(i)",
+            rawText: "r\(i)", cleanText: "c\(i)",
+            audioURL: nil, insertionStatus: .inserted
+        ))
+    }
+    #expect(FileManager.default.fileExists(atPath: tmp.path))
+
+    let result = await store.setPersistOnDisk(false)
+    #expect(
+        result.clearedOnDiskCount == 3,
+        "Expected clearedOnDiskCount = 3 (entries that were on disk), got \(String(describing: result.clearedOnDiskCount))"
+    )
+    #expect(!FileManager.default.fileExists(atPath: tmp.path),
+            "File should have been removed")
+
+    // Entries are still in memory even though the file is gone.
+    let stillInMemory = await store.recent(limit: 100)
+    #expect(stillInMemory.count == 3)
+}
+
+@Test("Observability: flipping persistOnDisk off with no file yields nil clearedOnDiskCount (no noise event)")
+func historyFlippingOffWithNoFileYieldsNil() async throws {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("history-flip-nofile-\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    // Start with persistence ON but never appended — no file exists.
+    let store = HistoryStore(
+        storageURL: tmp,
+        clipboardService: StubClipboardService(),
+        maxEntries: 500,
+        persistOnDisk: true,
+        retentionDays: 30
+    )
+    #expect(!FileManager.default.fileExists(atPath: tmp.path))
+
+    let result = await store.setPersistOnDisk(false)
+    #expect(
+        result.clearedOnDiskCount == nil,
+        "When no file existed to clear, clearedOnDiskCount must be nil so the caller skips the audit event"
+    )
+}
+
 @Test("On-disk history file is written with 0600 permissions")
 func historyFilePermissions() async throws {
     let tmp = FileManager.default.temporaryDirectory
