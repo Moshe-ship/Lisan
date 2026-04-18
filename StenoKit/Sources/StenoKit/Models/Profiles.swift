@@ -16,12 +16,14 @@ public enum LanguageMode: String, Sendable, Codable, Equatable, CaseIterable {
         }
     }
 
-    /// whisper.cpp language code: nil for auto, explicit code otherwise.
+    /// whisper.cpp language code. IMPORTANT: whisper-cli's `-l` default is
+    /// "en", not auto, so omitting `-l` silently forces English. We must
+    /// pass `-l auto` explicitly to enable real language detection.
     var whisperLanguageArg: String? {
         switch self {
         case .en:   return "en"
         case .ar:   return "ar"
-        case .auto: return nil
+        case .auto: return "auto"
         }
     }
 }

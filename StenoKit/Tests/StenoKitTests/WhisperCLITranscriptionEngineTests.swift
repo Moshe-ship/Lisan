@@ -204,8 +204,8 @@ struct WhisperCLITranscriptionEngineTests {
         #expect(captured.contains("ar"), "ar mode should pass ar as language code")
     }
 
-    @Test("LanguageMode auto omits -l arg (whisper auto-detects)")
-    func languageModeAutoOmitsLArg() async throws {
+    @Test("LanguageMode auto emits -l auto (whisper default -l is en, not auto)")
+    func languageModeAutoEmitsAuto() async throws {
         let (scriptURL, captureID) = try makeLanguageCaptureScript()
         defer { try? FileManager.default.removeItem(at: scriptURL) }
 
@@ -223,7 +223,8 @@ struct WhisperCLITranscriptionEngineTests {
             contentsOf: URL(fileURLWithPath: "/tmp/captured_args_\(captureID).txt"),
             encoding: .utf8
         )
-        #expect(!captured.contains("-l"), "auto mode should NOT emit -l (whisper auto-detects)")
+        #expect(captured.contains("-l"), "auto mode must emit -l (whisper's -l default is en, not auto)")
+        #expect(captured.contains("auto"), "auto mode must pass 'auto' as the language code to enable detection")
     }
 
     // MARK: - Vocabulary file tests

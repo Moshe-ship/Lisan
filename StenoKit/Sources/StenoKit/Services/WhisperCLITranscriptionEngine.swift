@@ -112,7 +112,9 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
             "-nt"
         ]
 
-        // Determine language: explicit hint wins; auto mode passes nothing (whisper auto-detects)
+        // Determine language: explicit hint wins; auto mode passes `-l auto`
+        // (whisper-cli's -l default is "en" so omitting the flag silently
+        // forces English, not language detection).
         if let firstHint = languageHints.first,
            let mode = LanguageMode(rawValue: firstHint.lowercased()),
            let langArg = mode.whisperLanguageArg {
