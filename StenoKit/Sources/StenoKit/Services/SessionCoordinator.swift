@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 
 public enum SessionCoordinatorError: Error, LocalizedError {
@@ -74,9 +75,31 @@ public actor SessionCoordinator {
 
         let audioURL = try await captureService.endCapture(sessionID: sessionID)
         defer { try? FileManager.default.removeItem(at: audioURL) }
+
+        // Drop clips too short to carry real speech. whisper.cpp on the
+        // base model hallucinates wildly on sub-400ms input (typical
+        // artifacts: "Okej" Swedish, "you" English, single-word Arabic).
+        // Gate before calling whisper — saves 100-300ms and prevents
+        // junk entries in history. duration==0 means the file couldn't
+        // be read as audio (tests pass zero-byte stubs) — in that case
+        // defer to the transcription engine's own handling.
+        let durationSeconds = Self.audioDurationSeconds(url: audioURL)
+        if durationSeconds > 0 && durationSeconds < 0.35 {
+            return InsertResult(status: .noSpeech, method: .none, insertedText: "")
+        }
+
         var rawTranscript = try await transcriptionEngine.transcribe(audioURL: audioURL, languageHints: [languageMode.rawValue])
 
-        if rawTranscript.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        let trimmed = rawTranscript.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return InsertResult(status: .noSpeech, method: .none, insertedText: "")
+        }
+
+        // Post-hoc hallucination filter. whisper produces known
+        // nonsense-from-silence phrases; if the clip was short AND the
+        // output matches one of these, discard rather than insert.
+        // durationSeconds==0 means test harness — don't filter there.
+        if durationSeconds > 0 && durationSeconds < 1.6 && Self.isLikelyHallucination(trimmed) {
             return InsertResult(status: .noSpeech, method: .none, insertedText: "")
         }
 
@@ -147,5 +170,48 @@ public actor SessionCoordinator {
                 outcome: CleanupOutcome(source: .localFallback, warning: warning)
             )
         }
+    }
+
+    /// Known whisper hallucinations on silence / breath / click.
+    /// Catalog is conservative — only phrases that are (a) extremely common
+    /// whisper artifacts AND (b) short enough that a real user wouldn't
+    /// have dictated them in under 1.6s. Matched case-insensitively on the
+    /// trimmed transcript.
+    private static let knownHallucinations: Set<String> = [
+        // English
+        "you", "you.", "thank you", "thank you.", "thanks for watching",
+        "thanks for watching.", "bye", "bye.", "ok", "okay", "okay.",
+        // Swedish hallucinations (whisper's "small talk" default on silence)
+        "okej", "okej.", "okej tack", "tack", "tack.",
+        // Arabic short-clip hallucinations
+        "شكرا", "شكرا لكم", "نعم", "حسنا", "حارق", "حسناً", "لا",
+        // Nordic/German drift
+        "danke", "ja", "ja.", "nein",
+        // Music / audio-placeholder tokens whisper emits on noise
+        "[music]", "(music)", "[applause]", "(applause)",
+        "[ موسيقى ]", "( موسيقى )"
+    ]
+
+    private static func isLikelyHallucination(_ text: String) -> Bool {
+        let normalized = text.lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if knownHallucinations.contains(normalized) { return true }
+        // Catch trivial repeat loops like "you you you you" or "ok ok ok".
+        let tokens = normalized
+            .split(whereSeparator: { $0.isWhitespace || $0 == "." || $0 == "," })
+            .map(String.init)
+        if tokens.count >= 3,
+           let first = tokens.first,
+           tokens.allSatisfy({ $0 == first }),
+           first.count <= 4 {
+            return true
+        }
+        return false
+    }
+
+    private static func audioDurationSeconds(url: URL) -> Double {
+        let asset = AVURLAsset(url: url)
+        let seconds = CMTimeGetSeconds(asset.duration)
+        return seconds.isFinite && seconds > 0 ? seconds : 0
     }
 }

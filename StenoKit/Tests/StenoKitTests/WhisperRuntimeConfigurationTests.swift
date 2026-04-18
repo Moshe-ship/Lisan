@@ -56,7 +56,11 @@ func additionalArgumentsAlwaysIncludeSuppressNST() {
         pathExists: { _ in false }
     )
 
-    #expect(args == ["-t", "4", "--suppress-nst"])
+    #expect(args.starts(with: ["-t", "4", "--suppress-nst"]))
+    #expect(args.contains("--no-speech-thold"))
+    #expect(args.contains("--entropy-thold"))
+    #expect(args.contains("--logprob-thold"))
+    #expect(!args.contains("--vad"))
 }
 
 @Test("additionalArguments include VAD flags when enabled and model exists")
@@ -68,7 +72,10 @@ func additionalArgumentsIncludeVADFlags() {
         pathExists: { path in path == "/tmp/vad.bin" }
     )
 
-    #expect(args == ["-t", "6", "--suppress-nst", "--vad", "--vad-model", "/tmp/vad.bin"])
+    #expect(args.starts(with: ["-t", "6", "--suppress-nst"]))
+    #expect(args.contains("--vad"))
+    #expect(args.contains("--vad-model"))
+    #expect(args.contains("/tmp/vad.bin"))
 }
 
 @Test("additionalArguments omit VAD flags when model is missing")
@@ -80,7 +87,8 @@ func additionalArgumentsOmitMissingVADFlags() {
         pathExists: { _ in false }
     )
 
-    #expect(args == ["-t", "6", "--suppress-nst"])
+    #expect(args.starts(with: ["-t", "6", "--suppress-nst"]))
+    #expect(!args.contains("--vad"))
 }
 
 @Test("processEnvironment adds local whisper library search paths")

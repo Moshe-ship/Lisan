@@ -60,7 +60,21 @@ public enum WhisperRuntimeConfiguration {
         vadModelPath: String,
         pathExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
     ) -> [String] {
-        var args = ["-t", "\(max(1, threadCount))", "--suppress-nst"]
+        // --suppress-nst: drop non-speech tokens before decoding
+        // --no-speech-thold 0.8: raise from default 0.6 so the decoder
+        //   skips segments it's only 60-80% sure are non-speech (common
+        //   trigger for hallucinated output from silence / breath / click).
+        // --entropy-thold 2.8: raise from default 2.4 so low-entropy repeat
+        //   loops ("you you you you", "thank you thank you") get flagged.
+        // --logprob-thold -0.8: tighten from default -1.0 so very-low-
+        //   confidence tokens are dropped.
+        var args = [
+            "-t", "\(max(1, threadCount))",
+            "--suppress-nst",
+            "--no-speech-thold", "0.8",
+            "--entropy-thold", "2.8",
+            "--logprob-thold", "-0.8"
+        ]
 
         if vadEnabled && pathExists(vadModelPath) {
             args.append(contentsOf: ["--vad", "--vad-model", vadModelPath])
