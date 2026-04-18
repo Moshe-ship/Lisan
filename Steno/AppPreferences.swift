@@ -62,6 +62,17 @@ struct AppPreferences: Codable, Sendable, Equatable {
         /// accurate for short Arabic clips; costs one extra model-load per
         /// dictation. Off by default.
         var twoPassAutoDetect: Bool
+        /// Ordered list of vocabulary pack filenames to enable, highest
+        /// priority first. Empty means "load every .txt in the
+        /// vocabularyFilePath directory" (legacy all-packs behavior).
+        /// Only consulted when vocabularyFilePath points at a directory.
+        var enabledPackFilenames: [String]
+        /// Split long recordings on silence and transcribe each segment
+        /// independently (per-segment language detection). The closest
+        /// honest thing to code-switch support whisper.cpp supports —
+        /// phrase-level, not word-level. Off by default; opt-in because
+        /// it multiplies latency by segment count.
+        var segmentedAutoDetect: Bool
 
         init(
             whisperCLIPath: String,
@@ -74,7 +85,9 @@ struct AppPreferences: Codable, Sendable, Equatable {
             bilingualCleanupEnabled: Bool = true,
             arabicOptions: ArabicNormalizationOptions = .default,
             arabicPunctuationEnabled: Bool = true,
-            twoPassAutoDetect: Bool = false
+            twoPassAutoDetect: Bool = false,
+            enabledPackFilenames: [String] = [],
+            segmentedAutoDetect: Bool = false
         ) {
             self.whisperCLIPath = whisperCLIPath
             self.modelPath = modelPath
@@ -87,6 +100,8 @@ struct AppPreferences: Codable, Sendable, Equatable {
             self.arabicOptions = arabicOptions
             self.arabicPunctuationEnabled = arabicPunctuationEnabled
             self.twoPassAutoDetect = twoPassAutoDetect
+            self.enabledPackFilenames = enabledPackFilenames
+            self.segmentedAutoDetect = segmentedAutoDetect
         }
 
         init(from decoder: Decoder) throws {
@@ -103,6 +118,8 @@ struct AppPreferences: Codable, Sendable, Equatable {
             arabicOptions = try container.decodeIfPresent(ArabicNormalizationOptions.self, forKey: .arabicOptions) ?? .default
             arabicPunctuationEnabled = try container.decodeIfPresent(Bool.self, forKey: .arabicPunctuationEnabled) ?? true
             twoPassAutoDetect = try container.decodeIfPresent(Bool.self, forKey: .twoPassAutoDetect) ?? false
+            enabledPackFilenames = try container.decodeIfPresent([String].self, forKey: .enabledPackFilenames) ?? []
+            segmentedAutoDetect = try container.decodeIfPresent(Bool.self, forKey: .segmentedAutoDetect) ?? false
         }
 
         mutating func updateModelPath(_ newModelPath: String) {

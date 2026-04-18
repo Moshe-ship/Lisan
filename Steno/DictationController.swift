@@ -186,6 +186,12 @@ final class DictationController: ObservableObject {
             loaded.dictation.vocabularyFilePath = bundledPacks.path
         }
 
+        // Seed per-app style profiles for known apps (terminals, IDEs, LLM
+        // clients, messaging, long-form writing). Only fills in bundle IDs
+        // the user hasn't customized themselves — users keep their own
+        // choices untouched.
+        AppProfileDefaults.seedIfEmpty(&loaded.appStyleProfiles)
+
         applyPreferencesLocally(loaded)
         refreshPermissionStatuses()
         validateWhisperPaths()
@@ -373,6 +379,18 @@ final class DictationController: ObservableObject {
         }
     }
 
+    func copyRawEntry(_ entry: TranscriptEntry) {
+        Task {
+            do {
+                try await clipboardService.setString(entry.rawText)
+                status = "Raw transcript copied."
+            } catch {
+                status = "Copy failed"
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
     /// Adds (or upserts) a lexicon entry from a user correction. Dedupes
     /// by (term, scope) — repeating a correction updates the replacement
     /// instead of creating a duplicate. Persists to preferences and
@@ -521,7 +539,8 @@ final class DictationController: ObservableObject {
             do {
                 let result = try await coordinator.stopPressToTalk(
                     sessionID: sessionID,
-                    languageMode: preferences.dictation.languageMode
+                    languageMode: preferences.dictation.languageMode,
+                    segmentedAutoDetect: preferences.dictation.segmentedAutoDetect
                 )
                 switch result.status {
                 case .inserted:
@@ -712,7 +731,10 @@ private struct DictationRuntimeFactory {
                 additionalArguments: extraArgs,
                 twoPassAutoDetect: snapshot.dictation.twoPassAutoDetect
             ),
-            vocabularyFileURL: vocabURL
+            vocabularyFileURL: vocabURL,
+            enabledPackFilenames: snapshot.dictation.enabledPackFilenames.isEmpty
+                ? nil
+                : snapshot.dictation.enabledPackFilenames
         )
     }
 

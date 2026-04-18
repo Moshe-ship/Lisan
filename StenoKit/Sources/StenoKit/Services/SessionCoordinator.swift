@@ -66,7 +66,11 @@ public actor SessionCoordinator {
         return sessionID
     }
 
-    public func stopPressToTalk(sessionID: SessionID, languageMode: LanguageMode = .auto) async throws -> InsertResult {
+    public func stopPressToTalk(
+        sessionID: SessionID,
+        languageMode: LanguageMode = .auto,
+        segmentedAutoDetect: Bool = false
+    ) async throws -> InsertResult {
         // Remove session before the first await so actor reentrancy cannot process
         // the same session twice while transcription/cleanup are in flight.
         guard let active = activeSessions.removeValue(forKey: sessionID) else {
@@ -88,7 +92,40 @@ public actor SessionCoordinator {
             return InsertResult(status: .noSpeech, method: .none, insertedText: "")
         }
 
-        var rawTranscript = try await transcriptionEngine.transcribe(audioURL: audioURL, languageHints: [languageMode.rawValue])
+        var rawTranscript: RawTranscript
+        // Segmented path: only worth running when the user opted in AND
+        // the clip is long enough that silence-splitting has a chance to
+        // find real phrase boundaries. Sub-3-second clips skip to the
+        // single-pass path directly.
+        if segmentedAutoDetect, languageMode == .auto, durationSeconds >= 3.0 {
+            let segmenter = AudioSegmenter()
+            let tmpDir = FileManager.default.temporaryDirectory
+                .appendingPathComponent("lisan-segments-\(sessionID.uuidString)", isDirectory: true)
+            defer { try? FileManager.default.removeItem(at: tmpDir) }
+            let segments = (try? await segmenter.splitAudio(at: audioURL, outputDirectory: tmpDir)) ?? [audioURL]
+            if segments.count > 1 {
+                var joined: [String] = []
+                for segURL in segments {
+                    let result = try await transcriptionEngine.transcribe(
+                        audioURL: segURL,
+                        languageHints: [languageMode.rawValue]
+                    )
+                    let piece = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !piece.isEmpty { joined.append(piece) }
+                }
+                rawTranscript = RawTranscript(text: joined.joined(separator: " "))
+            } else {
+                rawTranscript = try await transcriptionEngine.transcribe(
+                    audioURL: audioURL,
+                    languageHints: [languageMode.rawValue]
+                )
+            }
+        } else {
+            rawTranscript = try await transcriptionEngine.transcribe(
+                audioURL: audioURL,
+                languageHints: [languageMode.rawValue]
+            )
+        }
 
         let trimmed = rawTranscript.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {

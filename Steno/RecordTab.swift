@@ -5,6 +5,7 @@ struct RecordTab: View {
     @EnvironmentObject private var controller: DictationController
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showErrorBanner = false
+    @State private var showPermissionRepair = false
 
     var body: some View {
         Group {
@@ -28,6 +29,9 @@ struct RecordTab: View {
         }
         .onAppear {
             showErrorBanner = hasError
+        }
+        .sheet(isPresented: $showPermissionRepair) {
+            PermissionRepairView(onDismiss: { showPermissionRepair = false })
         }
     }
 
@@ -249,12 +253,12 @@ struct RecordTab: View {
                 .controlSize(.small)
                 .accessibilityLabel("Restart Lisan to apply granted permissions")
             } else if isPermissionRelated {
-                Button(grantLabel) {
-                    openRelevantSettings()
+                Button("Fix permissions") {
+                    showPermissionRepair = true
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
-                .accessibilityLabel(grantLabel)
+                .accessibilityLabel("Open permission repair flow")
             }
 
             Spacer(minLength: StenoDesign.xs)

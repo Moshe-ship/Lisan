@@ -153,7 +153,7 @@ struct HistoryTab: View {
                 statusPill(entry.insertionStatus)
             }
 
-            // Body text
+            // Body text (clean by default; expanded view shows both)
             Text(entry.cleanText.isEmpty ? entry.rawText : entry.cleanText)
                 .font(StenoDesign.callout())
                 .foregroundStyle(StenoDesign.textPrimary)
@@ -169,12 +169,58 @@ struct HistoryTab: View {
                     }
                 }
 
-            // Bottom line: timestamp + copy/paste
+            // Expanded view: show raw transcript alongside clean if they differ.
+            if isExpanded, !entry.rawText.isEmpty, entry.rawText != entry.cleanText {
+                VStack(alignment: .leading, spacing: StenoDesign.xs) {
+                    HStack(spacing: StenoDesign.xs) {
+                        Image(systemName: "quote.bubble")
+                            .font(StenoDesign.caption())
+                            .foregroundStyle(StenoDesign.textSecondary)
+                        Text("Raw (before cleanup)")
+                            .font(StenoDesign.captionEmphasis())
+                            .foregroundStyle(StenoDesign.textSecondary)
+                        Spacer()
+                        Button {
+                            controller.copyRawEntry(entry)
+                        } label: {
+                            Text("Copy raw")
+                                .font(StenoDesign.caption())
+                                .foregroundStyle(StenoDesign.accent)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Copy raw transcript")
+                    }
+                    Text(entry.rawText)
+                        .font(StenoDesign.caption())
+                        .foregroundStyle(StenoDesign.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                .padding(StenoDesign.sm)
+                .background(StenoDesign.surfaceSecondary)
+                .cornerRadius(StenoDesign.radiusSmall)
+            }
+
+            // Bottom line: timestamp + copy / paste / correct
             HStack {
                 Text(relativeTimestamp(for: entry.createdAt))
                     .font(StenoDesign.caption())
                     .foregroundStyle(StenoDesign.textSecondary)
                 Spacer()
+
+                Button {
+                    correctionTarget = entry
+                } label: {
+                    HStack(spacing: StenoDesign.xs) {
+                        Image(systemName: "pencil.and.list.clipboard")
+                        Text("Correct")
+                    }
+                    .font(StenoDesign.caption())
+                    .foregroundStyle(StenoDesign.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Correct transcript and save to lexicon")
+                .help("Fix this transcript and teach Lisan the correction")
 
                 CopyButtonView {
                     controller.copyEntry(entry)

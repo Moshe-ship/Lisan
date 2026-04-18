@@ -41,6 +41,17 @@ struct LanguageSettingsSection: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
+
+                    Toggle(isOn: $preferences.dictation.segmentedAutoDetect) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Segmented auto-detect (for code-switch)")
+                                .font(StenoDesign.body())
+                            Text("Splits recordings >3s on silence gaps and transcribes each chunk with its own language decision. Helps when you switch between English and Arabic within a single recording. Latency grows with segment count.")
+                                .font(StenoDesign.caption())
+                                .foregroundStyle(StenoDesign.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
 
                 Divider()

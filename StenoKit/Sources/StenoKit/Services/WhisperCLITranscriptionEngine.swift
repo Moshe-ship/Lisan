@@ -49,21 +49,33 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
     /// transcription prompt/hint to bias recognition toward custom terms.
     private let vocabularyText: String?
 
-    public init(config: Configuration, vocabularyFileURL: URL? = nil) {
+    public init(
+        config: Configuration,
+        vocabularyFileURL: URL? = nil,
+        enabledPackFilenames: [String]? = nil
+    ) {
         self.config = config
         self.cachedEnvironment = Self.buildProcessEnvironment(config: config)
-        self.vocabularyText = Self.loadVocabulary(at: vocabularyFileURL)
+        self.vocabularyText = Self.loadVocabulary(
+            at: vocabularyFileURL,
+            enabledPackFilenames: enabledPackFilenames
+        )
     }
 
     /// Loads vocabulary phrases from either a single text file or a directory.
     ///
-    /// Accepting a directory lets users layer multiple "packs" (msa-business,
-    /// khaleeji-common, saudi-places, gcc-brands, their own custom files) by
-    /// pointing Lisan at a folder. All `.txt` files are read alphabetically,
-    /// trimmed, de-duplicated, and joined with spaces.
+    /// When `enabledPackFilenames` is supplied and the URL resolves to a
+    /// directory, only the listed filenames are loaded, in the order given.
+    /// That's how the pack multi-select with priority is honored — earlier
+    /// entries bias the decoder more because they appear first in the
+    /// --prompt string. Nil/empty means load every .txt in the directory
+    /// alphabetically (legacy all-packs behavior).
     ///
     /// Comments starting with `#` are ignored.
-    static func loadVocabulary(at url: URL?) -> String? {
+    static func loadVocabulary(
+        at url: URL?,
+        enabledPackFilenames: [String]? = nil
+    ) -> String? {
         guard let url else { return nil }
 
         var files: [URL] = []
@@ -73,14 +85,20 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
         }
 
         if isDir.boolValue {
-            let contents = (try? FileManager.default.contentsOfDirectory(
-                at: url,
-                includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles]
-            )) ?? []
-            files = contents
-                .filter { $0.pathExtension.lowercased() == "txt" }
-                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            if let ordered = enabledPackFilenames, !ordered.isEmpty {
+                files = ordered
+                    .map { url.appendingPathComponent($0) }
+                    .filter { FileManager.default.fileExists(atPath: $0.path) }
+            } else {
+                let contents = (try? FileManager.default.contentsOfDirectory(
+                    at: url,
+                    includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles]
+                )) ?? []
+                files = contents
+                    .filter { $0.pathExtension.lowercased() == "txt" }
+                    .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            }
         } else {
             files = [url]
         }
