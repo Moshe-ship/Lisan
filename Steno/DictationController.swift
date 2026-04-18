@@ -37,6 +37,10 @@ final class DictationController: ObservableObject {
 
     private var recordingStateMachine = RecordingStateMachine()
     private var currentSessionID: SessionID?
+    /// Last hotkey-registration telemetry event we recorded. Used to drop
+    /// duplicates when macOS fires the registration callback multiple times
+    /// for the same underlying state (noisy, no new signal).
+    private var lastHotkeyTelemetryCode: DiagnosticEvent.StartupErrorCode?
     private var activeRecordingMode: RecordingMode?
     private var activeMediaToken: MediaInterruptionToken?
     private var activeStartTask: Task<Void, Never>?
@@ -78,21 +82,27 @@ final class DictationController: ObservableObject {
             switch status {
             case .registered:
                 self?.hotkeyRegistrationMessage = ""
+                self?.lastHotkeyTelemetryCode = nil
             case .unavailable(let reason):
                 self?.hotkeyRegistrationMessage = reason
                 self?.overlay.show(state: .failure(message: reason))
                 self?.dismissOverlaySoon()
-                // Telemetry: the reason string is a system-generated diagnostic
-                // from MacHotkeyMonitor (e.g., "Accessibility permission required")
-                // and contains no user content. Map the condition to a bounded code.
+                // Telemetry: map reason string to a bounded code. Only log when
+                // the code changes — macOS fires this callback multiple times
+                // during startup for the same state, no new information.
                 if let self = self {
-                    Task { [telemetry = self.telemetry] in
-                        await telemetry.record(.startupFailure(
-                            phase: .hotkeyRegistration,
-                            errorCode: reason.lowercased().contains("permission")
-                                ? .inputSystemUnavailable
-                                : .hotkeyTaken
-                        ))
+                    let code: DiagnosticEvent.StartupErrorCode =
+                        reason.lowercased().contains("permission")
+                            ? .inputSystemUnavailable
+                            : .hotkeyTaken
+                    if self.lastHotkeyTelemetryCode != code {
+                        self.lastHotkeyTelemetryCode = code
+                        Task { [telemetry = self.telemetry] in
+                            await telemetry.record(.startupFailure(
+                                phase: .hotkeyRegistration,
+                                errorCode: code
+                            ))
+                        }
                     }
                 }
             }
