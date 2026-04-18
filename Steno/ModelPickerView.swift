@@ -2,11 +2,11 @@ import SwiftUI
 import StenoKit
 
 /// Lets users pick from a curated list of whisper.cpp multilingual models
-/// and download them on demand. Resolves the models directory from the
-/// currently-configured model path — so downloads land next to whatever
-/// model the user is already pointing at.
+/// and download them on demand. Works on a plain Binding<String> so it
+/// can be hosted both in Settings (against AppPreferences) and in
+/// Onboarding (against a local @State path).
 struct ModelPickerView: View {
-    @Binding var preferences: AppPreferences
+    @Binding var modelPath: String
     @State private var downloading: Set<String> = []
     @State private var progressByID: [String: Double] = [:]
     @State private var errorMessage: String?
@@ -14,8 +14,7 @@ struct ModelPickerView: View {
     private let downloader = WhisperModelDownloader()
 
     private var modelsDirectory: URL {
-        let currentPath = preferences.dictation.modelPath
-        let parent = (currentPath as NSString).deletingLastPathComponent
+        let parent = (modelPath as NSString).deletingLastPathComponent
         if !parent.isEmpty {
             return URL(fileURLWithPath: parent, isDirectory: true)
         }
@@ -25,7 +24,7 @@ struct ModelPickerView: View {
     }
 
     private var activeFilename: String {
-        (preferences.dictation.modelPath as NSString).lastPathComponent
+        (modelPath as NSString).lastPathComponent
     }
 
     var body: some View {
@@ -139,7 +138,7 @@ struct ModelPickerView: View {
 
     private func use(_ entry: WhisperModelCatalog.Entry) {
         let newPath = modelsDirectory.appendingPathComponent(entry.filename).path
-        preferences.dictation.updateModelPath(newPath)
+        modelPath = newPath
         errorMessage = nil
     }
 
@@ -161,7 +160,7 @@ struct ModelPickerView: View {
                 await MainActor.run {
                     downloading.remove(entry.id)
                     progressByID[entry.id] = 1.0
-                    preferences.dictation.updateModelPath(finalURL.path)
+                    modelPath = finalURL.path
                 }
             } catch {
                 await MainActor.run {

@@ -14,7 +14,7 @@ struct EngineSettingsSection: View {
                 .font(StenoDesign.caption())
                 .foregroundStyle(StenoDesign.textSecondary)
 
-            ModelPickerView(preferences: $preferences)
+            ModelPickerView(modelPath: modelPathBinding)
 
             Divider()
 

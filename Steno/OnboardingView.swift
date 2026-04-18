@@ -195,44 +195,54 @@ struct OnboardingView: View {
     // MARK: - Step 3: Whisper Setup
 
     private var whisperSetupStep: some View {
-        VStack(spacing: StenoDesign.lg) {
-            Spacer()
-
-            VStack(spacing: StenoDesign.sm) {
-                Text("Local Transcription Setup")
-                    .font(StenoDesign.heading1())
-                    .foregroundStyle(StenoDesign.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text("Confirm the paths to your local whisper-cli binary and model file. For better silence and background-noise suppression, download the optional VAD model (see Settings \u{2192} Engine after setup).")
-                    .font(StenoDesign.subheadline())
-                    .foregroundStyle(StenoDesign.textSecondary)
-            }
-
-            VStack(alignment: .leading, spacing: StenoDesign.md) {
-                VStack(alignment: .leading, spacing: StenoDesign.xs) {
-                    Text("whisper-cli path")
-                        .font(StenoDesign.bodyEmphasis())
+        ScrollView {
+            VStack(spacing: StenoDesign.lg) {
+                VStack(spacing: StenoDesign.sm) {
+                    Text("Pick a transcription model")
+                        .font(StenoDesign.heading1())
                         .foregroundStyle(StenoDesign.textPrimary)
-                    TextField("Path to whisper-cli binary", text: $whisperCLIPath)
-                        .textFieldStyle(.roundedBorder)
-                    pathValidationLabel(valid: whisperCLIPathValid)
+                        .accessibilityAddTraits(.isHeader)
+
+                    Text("Lisan runs whisper.cpp locally — nothing leaves your Mac. Small is recommended for Arabic. You can change models any time from Settings \u{2192} Engine.")
+                        .font(StenoDesign.subheadline())
+                        .foregroundStyle(StenoDesign.textSecondary)
+                        .multilineTextAlignment(.center)
                 }
 
-                VStack(alignment: .leading, spacing: StenoDesign.xs) {
-                    Text("Model path")
-                        .font(StenoDesign.bodyEmphasis())
-                        .foregroundStyle(StenoDesign.textPrimary)
-                    TextField("Path to model file", text: $modelPath)
-                        .textFieldStyle(.roundedBorder)
-                    pathValidationLabel(valid: modelPathValid)
-                }
-            }
-            .cardStyle()
+                ModelPickerView(modelPath: $modelPath)
+                    .cardStyle()
 
-            Spacer()
+                DisclosureGroup("Advanced: manual paths") {
+                    VStack(alignment: .leading, spacing: StenoDesign.md) {
+                        VStack(alignment: .leading, spacing: StenoDesign.xs) {
+                            Text("whisper-cli path")
+                                .font(StenoDesign.caption())
+                                .foregroundStyle(StenoDesign.textSecondary)
+                            TextField("Path to whisper-cli binary", text: $whisperCLIPath)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.caption, design: .monospaced))
+                            pathValidationLabel(valid: whisperCLIPathValid)
+                        }
+
+                        VStack(alignment: .leading, spacing: StenoDesign.xs) {
+                            Text("Model path")
+                                .font(StenoDesign.caption())
+                                .foregroundStyle(StenoDesign.textSecondary)
+                            TextField("Path to model file", text: $modelPath)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.caption, design: .monospaced))
+                            pathValidationLabel(valid: modelPathValid)
+                        }
+                    }
+                    .padding(.top, StenoDesign.xs)
+                }
+                .font(StenoDesign.caption())
+                .foregroundStyle(StenoDesign.textSecondary)
+            }
+            .padding(.vertical, StenoDesign.md)
         }
     }
+
 
     private var whisperCLIPathValid: Bool {
         FileManager.default.fileExists(atPath: whisperCLIPath)
