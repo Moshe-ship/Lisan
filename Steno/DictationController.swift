@@ -177,6 +177,15 @@ final class DictationController: ObservableObject {
         var loaded = await preferencesStore.load()
         loaded.normalize()
 
+        // First-run default: enable the bundled vocabulary packs for dialect
+        // biasing. Whisper.cpp loads every .txt file in a directory when
+        // pointed at one, so a single path setting enables all 10 packs.
+        // Only applied when the user hasn't configured a path already.
+        if loaded.dictation.vocabularyFilePath.isEmpty,
+           let bundledPacks = Self.bundledPacksDirectory() {
+            loaded.dictation.vocabularyFilePath = bundledPacks.path
+        }
+
         applyPreferencesLocally(loaded)
         refreshPermissionStatuses()
         validateWhisperPaths()
@@ -184,6 +193,18 @@ final class DictationController: ObservableObject {
         await refreshHistory()
         overlay.prepareWindow()
         hasBootstrapped = true
+    }
+
+    private static func bundledPacksDirectory() -> URL? {
+        guard let url = Bundle.main.url(forResource: "packs", withExtension: nil) else {
+            return nil
+        }
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir),
+              isDir.boolValue else {
+            return nil
+        }
+        return url
     }
 
     func savePreferences() {
