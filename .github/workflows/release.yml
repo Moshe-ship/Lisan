@@ -129,6 +129,20 @@ jobs:
             --repo "${{ github.repository }}" \
             --clobber
 
+      - name: Trigger post-release verification
+        # Releases created by GITHUB_TOKEN don't re-trigger other workflows
+        # (GitHub's infinite-loop protection). Explicitly dispatch the
+        # verification workflow here so the release gate runs on every
+        # automated publish, not just releases created via the UI.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          V="${{ steps.version.outputs.version }}"
+          gh workflow run verify-release.yml \
+            --repo "${{ github.repository }}" \
+            --field "tag=v${V}"
+
       - name: Summary
         run: |
           V="${{ steps.version.outputs.version }}"
@@ -137,3 +151,6 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           shasum -a 256 "$ZIP" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/v${V}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verification workflow dispatched." >> "$GITHUB_STEP_SUMMARY"
