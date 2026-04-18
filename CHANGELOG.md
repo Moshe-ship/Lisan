@@ -5,6 +5,99 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2026-04-18
+
+### Changed
+- Settings → Engine: added `Backend: Whisper.cpp` subtitle; moved raw
+  paths, thread count, and VAD toggle into a collapsed `Advanced paths
+  & tuning` disclosure. Model picker is now the primary view.
+- `WhisperModelCatalog`: Tiny model summary rewritten from
+  "English-biased" to "Multilingual but weak on Arabic".
+
+## [0.3.6] - 2026-04-18
+
+### Added
+- `WhisperModelCatalog`: catalog of four multilingual whisper models
+  (Tiny, Base, Small, Medium) with canonical Hugging Face URLs,
+  expected byte sizes, and human-readable summaries. Multilingual-only
+  by design (no `.en` variants).
+- `WhisperModelDownloader`: actor-backed URLSession downloader. Streams
+  to temp file, verifies size is ≥95% of expected, atomic-moves into
+  the target models directory. Per-progress-callback and cancellation
+  supported.
+- `ModelPickerView` surfaced in Settings → Engine. Per-row state:
+  Active / In use / Download / Downloading (with progress bar + cancel).
+  Writes the chosen model into `preferences.dictation.modelPath`.
+
+### Rationale
+The `base` model (141MB) has weak Arabic transcription — it frequently
+picks near-homophone letters (ط vs ت, ض vs ظ) and substitutes
+singular/plural forms on short utterances. Offering `small` (465MB) or
+`medium` (1.5GB) in-product is the biggest remaining accuracy lever.
+
+## [0.3.5] - 2026-04-18
+
+### Fixed
+- Whisper CLI thresholds tightened to suppress hallucinations from
+  silence: `--no-speech-thold 0.8` (was 0.6), `--entropy-thold 2.8`
+  (was 2.4), `--logprob-thold -0.8` (was -1.0). Directly addresses the
+  "Okej" Swedish / "you you you" / single-word Arabic noise artifacts.
+- `SessionCoordinator` gates audio < 350ms before invoking whisper.
+  Accidental Option taps now return `.noSpeech` without calling the
+  decoder.
+- Post-hoc hallucination filter catalog: for clips under 1.6 seconds,
+  outputs matching a curated list of whisper silence-phrases
+  (multi-language) or trivial repeat loops get discarded instead of
+  inserted.
+
+## [0.3.4] - 2026-04-18
+
+### Fixed
+- Auto-detect mode was silently forcing English. whisper-cli's `-l`
+  flag defaults to `en` when unspecified, not `auto`. Our auto mode
+  returned `nil` for `whisperLanguageArg` and never appended `-l`, so
+  every Auto-mode Arabic utterance was decoded as English phonemes
+  ("asalamualaikum" instead of "السلام عليكم"). Now emits `-l auto`
+  explicitly.
+
+## [0.3.3] - 2026-04-18
+
+### Fixed
+- Permission UX, three real bugs:
+  1. Grant button in the Record-tab banner now routes to the actually
+     blocked permission pane (Accessibility / Input Monitoring /
+     Microphone) by inspecting `controller.*PermissionStatus` instead
+     of string-matching the error text. Button label reflects the
+     destination.
+  2. `DictationController` subscribes to
+     `NSApplication.didBecomeActiveNotification` and re-polls
+     permissions + restarts the hotkey subsystem when the user returns
+     from System Settings. The stuck "permission required" banner
+     now clears itself.
+  3. New "Restart Lisan" button appears when accessibility is granted
+     but the hotkey tap still can't install (macOS TCC per-process
+     cache staleness). Spawns a fresh instance of the current bundle
+     and terminates the running one.
+
+## [0.3.2] - 2026-04-18
+
+### Fixed
+- Settings → Save & Apply now gives visible feedback. Button label
+  toggles to "Saved ✓" for 2 seconds after save, shows "Unsaved
+  changes" while the draft differs from applied preferences, and is
+  disabled when clean. Uses existing `AppPreferences: Equatable`
+  conformance — no model changes.
+
+## [0.3.1] - 2026-04-18
+
+### Fixed
+- `DictationController.stopPressToTalk` now forwards
+  `preferences.dictation.languageMode` to
+  `SessionCoordinator.stopPressToTalk`. Before this, the languageMode
+  argument defaulted to `.auto` at dictation time regardless of what
+  the user had saved in Settings. Users who saved Arabic mode were
+  still getting auto-detect (which itself was broken, see 0.3.4).
+
 ## [0.3.0] - 2026-04-18
 
 Four post-v0.2.3 reviewer improvements, delivered in one release.
