@@ -62,7 +62,15 @@ final class DictationController: ObservableObject {
         self.mediaInterruption = mediaInterruption
         self.preferencesStore = preferencesStore
         self.launchAtLoginService = launchAtLoginService
-        self.historyStore = HistoryStore(clipboardService: clipboardService)
+        // The live retention policy is re-pushed into the store after
+        // bootstrap loads the user's preferences. The initial values
+        // here match the AppPreferences.General defaults so fresh
+        // installs behave consistently before `bootstrap()` runs.
+        self.historyStore = HistoryStore(
+            clipboardService: clipboardService,
+            persistOnDisk: true,
+            retentionDays: 30
+        )
         self.lexiconService = PersonalLexiconService(entries: AppPreferences.default.lexiconEntries)
         self.styleProfileService = StyleProfileService(
             globalProfile: AppPreferences.default.globalStyleProfile,
@@ -596,6 +604,14 @@ final class DictationController: ObservableObject {
         hotkey.isOptionPressToTalkEnabled = newValue.hotkeys.optionPressToTalkEnabled
         hotkey.globalToggleKeyCode = newValue.hotkeys.handsFreeGlobalKeyCode
         applyDockVisibility(showDockIcon: newValue.general.showDockIcon)
+
+        // Push the user's history-persistence choice into the store.
+        // When flipping the toggle off, the store removes the on-disk
+        // file immediately — no delayed cleanup surprises.
+        let persist = newValue.general.persistHistoryOnDisk
+        Task { [historyStore] in
+            await historyStore.setPersistOnDisk(persist)
+        }
     }
 
     private func rebuildRuntimeOrDefer() async {

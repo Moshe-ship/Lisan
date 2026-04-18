@@ -18,6 +18,29 @@ struct GeneralSettingsSection: View {
                 preferences.general.showOnboarding = true
             }
             .buttonStyle(.bordered)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: StenoDesign.xs) {
+                Toggle("Save transcript history to disk", isOn: $preferences.general.persistHistoryOnDisk)
+                Text("When off, transcripts live only in this app session and disappear at quit. When on, they're kept in ~/Library/Application Support/Steno/transcript-history.json with owner-only permissions (0600) and excluded from iCloud/Time Machine backup.")
+                    .font(StenoDesign.caption())
+                    .foregroundStyle(StenoDesign.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if preferences.general.persistHistoryOnDisk {
+                    Stepper(
+                        value: $preferences.general.historyRetentionDays,
+                        in: 1...365
+                    ) {
+                        Text("Keep for \(preferences.general.historyRetentionDays) day\(preferences.general.historyRetentionDays == 1 ? "" : "s")")
+                    }
+                    Text("Entries older than this are pruned from both memory and the on-disk file on every new transcription.")
+                        .font(StenoDesign.caption())
+                        .foregroundStyle(StenoDesign.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 }

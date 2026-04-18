@@ -177,17 +177,37 @@ public actor DiagnosticsTelemetry {
 
 // MARK: - File-backed storage
 
-/// Rolling JSON-lines file under Application Support. Atomic write on
-/// each append to survive ungraceful termination. No rotation — capacity
-/// is enforced by the Telemetry actor, not the file.
+/// Rolling JSON-lines file under Application Support with a hard line
+/// cap on disk. The in-memory telemetry actor enforces capacity for
+/// the live buffer; this layer mirrors that cap to the file so the
+/// on-disk log never grows unbounded (previous behavior was append-
+/// forever, which contradicted the "bounded retention" contract).
+///
+/// On append, if the file has grown past `maxLinesOnDisk`, the last
+/// `capAfterRotation` lines are rewritten atomically, replacing the
+/// old file. Rotation is triggered lazily so happy-path appends stay
+/// a single `write()` syscall.
 public struct FileDiagnosticsStorage: DiagnosticsStorage {
     public let fileURL: URL
+    /// Hard ceiling. When the file exceeds this, rotation fires.
+    public let maxLinesOnDisk: Int
+    /// After rotation, file is truncated down to this count. Kept
+    /// smaller than `maxLinesOnDisk` so rotations don't retrigger on
+    /// the very next append.
+    public let capAfterRotation: Int
 
-    public init(fileURL: URL) {
+    public init(
+        fileURL: URL,
+        maxLinesOnDisk: Int = 1_000,
+        capAfterRotation: Int = 500
+    ) {
+        precondition(capAfterRotation <= maxLinesOnDisk)
         self.fileURL = fileURL
+        self.maxLinesOnDisk = maxLinesOnDisk
+        self.capAfterRotation = capAfterRotation
     }
 
-    public init() {
+    public init(maxLinesOnDisk: Int = 1_000, capAfterRotation: Int = 500) {
         let base = try? FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -197,7 +217,11 @@ public struct FileDiagnosticsStorage: DiagnosticsStorage {
         let dir = base?.appendingPathComponent("Lisan", isDirectory: true)
             ?? URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Lisan", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        self.fileURL = dir.appendingPathComponent("diagnostics.jsonl")
+        self.init(
+            fileURL: dir.appendingPathComponent("diagnostics.jsonl"),
+            maxLinesOnDisk: maxLinesOnDisk,
+            capAfterRotation: capAfterRotation
+        )
     }
 
     public func append(_ record: DiagnosticRecord) async throws {
@@ -208,12 +232,43 @@ public struct FileDiagnosticsStorage: DiagnosticsStorage {
         line.append(0x0A)  // newline
         if FileManager.default.fileExists(atPath: fileURL.path) {
             let handle = try FileHandle(forWritingTo: fileURL)
-            defer { try? handle.close() }
             try handle.seekToEnd()
             try handle.write(contentsOf: line)
+            try? handle.close()
+            // Enforce line cap. Cheap: only count when the file is
+            // already sizable enough that rotation might be needed.
+            try rotateIfOverCap()
         } else {
             try line.write(to: fileURL, options: .atomic)
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: NSNumber(value: Int16(0o600))],
+                ofItemAtPath: fileURL.path
+            )
         }
+    }
+
+    /// Read the whole file, count lines, and if over cap, rewrite with
+    /// only the tail. Cheap when the file is under cap: one stat().
+    private func rotateIfOverCap() throws {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path)
+        // Skip rotation work when the file is small regardless of cap
+        // (cap is lines, but we read size first as a cheap pre-check —
+        // 1000 JSON lines * ~300 bytes each ≈ 300 KB; files under 64 KB
+        // can't plausibly hit our line cap).
+        if let size = attrs?[.size] as? NSNumber, size.intValue < 64 * 1024 {
+            return
+        }
+        let content = try String(contentsOf: fileURL, encoding: .utf8)
+        let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
+        guard lines.count > maxLinesOnDisk else { return }
+        let kept = lines.suffix(capAfterRotation)
+        let rewritten = kept.joined(separator: "\n") + "\n"
+        try rewritten.write(to: fileURL, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: NSNumber(value: Int16(0o600))],
+            ofItemAtPath: fileURL.path
+        )
     }
 
     public func load() async throws -> [DiagnosticRecord] {

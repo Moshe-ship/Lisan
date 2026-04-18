@@ -6,11 +6,26 @@ struct AppPreferences: Codable, Sendable, Equatable {
         var launchAtLoginEnabled: Bool
         var showDockIcon: Bool
         var showOnboarding: Bool
+        /// When false, transcript history lives only in memory and is
+        /// erased at app quit. Default true preserves the pre-privacy-
+        /// audit behavior; privacy-conscious users can flip it off.
+        var persistHistoryOnDisk: Bool
+        /// Entries older than this are pruned from both memory and the
+        /// on-disk JSON on every append. Default 30 days.
+        var historyRetentionDays: Int
 
-        init(launchAtLoginEnabled: Bool, showDockIcon: Bool, showOnboarding: Bool) {
+        init(
+            launchAtLoginEnabled: Bool,
+            showDockIcon: Bool,
+            showOnboarding: Bool,
+            persistHistoryOnDisk: Bool = true,
+            historyRetentionDays: Int = 30
+        ) {
             self.launchAtLoginEnabled = launchAtLoginEnabled
             self.showDockIcon = showDockIcon
             self.showOnboarding = showOnboarding
+            self.persistHistoryOnDisk = persistHistoryOnDisk
+            self.historyRetentionDays = historyRetentionDays
         }
 
         init(from decoder: Decoder) throws {
@@ -18,6 +33,8 @@ struct AppPreferences: Codable, Sendable, Equatable {
             launchAtLoginEnabled = try container.decodeIfPresent(Bool.self, forKey: .launchAtLoginEnabled) ?? false
             showDockIcon = try container.decodeIfPresent(Bool.self, forKey: .showDockIcon) ?? true
             showOnboarding = try container.decodeIfPresent(Bool.self, forKey: .showOnboarding) ?? false
+            persistHistoryOnDisk = try container.decodeIfPresent(Bool.self, forKey: .persistHistoryOnDisk) ?? true
+            historyRetentionDays = try container.decodeIfPresent(Int.self, forKey: .historyRetentionDays) ?? 30
         }
     }
 

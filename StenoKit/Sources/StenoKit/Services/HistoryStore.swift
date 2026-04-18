@@ -21,22 +21,56 @@ public actor HistoryStore: HistoryStoreProtocol {
     private let storageURL: URL
     private let clipboardService: ClipboardService
     private let maxEntries: Int
+    /// When false, no on-disk persistence: entries live only in memory,
+    /// any existing file is removed on first write, and loads return
+    /// empty. Users who don't want transcripts on disk get strict
+    /// in-memory behavior that disappears on app quit.
+    private var persistOnDisk: Bool
+    /// Entries older than this are dropped from both memory and disk on
+    /// every write. Default 30 days. The retention cap is enforced on
+    /// *persist* (not just in-memory filters) so the on-disk JSON
+    /// actually shrinks over time.
+    private let retentionDays: Int
 
     public init(
         storageURL: URL? = nil,
         clipboardService: ClipboardService,
-        maxEntries: Int = 500
+        maxEntries: Int = 500,
+        persistOnDisk: Bool = true,
+        retentionDays: Int = 30
     ) {
         self.storageURL = storageURL ?? Self.defaultStorageURL()
         self.clipboardService = clipboardService
         self.maxEntries = maxEntries
+        self.persistOnDisk = persistOnDisk
+        self.retentionDays = retentionDays
+    }
+
+    /// Update persistence policy at runtime (user toggled the Settings
+    /// switch). When flipping from on → off, we also clear the on-disk
+    /// file so the act of disabling actually removes what was there.
+    public func setPersistOnDisk(_ value: Bool) async {
+        guard persistOnDisk != value else { return }
+        persistOnDisk = value
+        if !value {
+            try? FileManager.default.removeItem(at: storageURL)
+            hasPreparedStorageDirectory = false
+        } else {
+            // Flipping back on — write whatever we have in memory.
+            try? persist()
+        }
     }
 
     private func ensureLoaded() {
         guard !hasLoaded else { return }
         hasLoaded = true
+        guard persistOnDisk else {
+            entries = []
+            return
+        }
         do {
             entries = try Self.loadEntries(from: storageURL)
+            pruneExpired()
         } catch {
             entries = []
         }
@@ -45,10 +79,20 @@ public actor HistoryStore: HistoryStoreProtocol {
     public func append(entry: TranscriptEntry) async throws {
         ensureLoaded()
         entries.insert(entry, at: 0)
+        pruneExpired()
         if entries.count > maxEntries {
             entries = Array(entries.prefix(maxEntries))
         }
         try persist()
+    }
+
+    /// Drops entries older than `retentionDays` from the in-memory list.
+    /// Called on every append so the on-disk file, which we persist from
+    /// `entries`, is also bounded over time.
+    private func pruneExpired() {
+        guard retentionDays > 0 else { return }
+        let cutoff = Date().addingTimeInterval(-Double(retentionDays) * 86_400)
+        entries.removeAll { $0.createdAt < cutoff }
     }
 
     public func delete(entryID: UUID) async throws {
@@ -112,6 +156,13 @@ public actor HistoryStore: HistoryStoreProtocol {
     }
 
     private func persist() throws {
+        // Persistence is opt-out — when the user has disabled on-disk
+        // history, every append stays in memory and is gone at quit.
+        guard persistOnDisk else {
+            try? FileManager.default.removeItem(at: storageURL)
+            return
+        }
+
         let encoder = JSONEncoder()
         encoder.outputFormatting = []
         encoder.dateEncodingStrategy = .iso8601
@@ -120,6 +171,20 @@ public actor HistoryStore: HistoryStoreProtocol {
             try ensureStorageDirectoryExists()
             let data = try encoder.encode(entries)
             try data.write(to: storageURL, options: [.atomic])
+            // Restrict to owner-read/write only. rawText + cleanText
+            // would otherwise be world-readable under any user-data
+            // collection tool that traverses Application Support.
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: NSNumber(value: Int16(0o600))],
+                ofItemAtPath: storageURL.path
+            )
+            // Also exclude the file from iCloud / Time Machine backups
+            // by default — transcript history is local-only state, not
+            // something users typically want syncing to other devices.
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = true
+            var urlCopy = storageURL
+            try? urlCopy.setResourceValues(resourceValues)
         } catch {
             throw HistoryStoreError.persistenceFailed
         }

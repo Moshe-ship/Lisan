@@ -177,4 +177,83 @@ struct DiagnosticsTelemetryTests {
         ]
         #expect(all.count == 7)
     }
+
+    // MARK: - On-disk retention
+
+    @Test("FileDiagnosticsStorage rotates when on-disk line count exceeds maxLinesOnDisk")
+    func fileStorageRotatesWhenOverCap() async throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("diag-rotate-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        // Force rotation at 50 with trim to 10 so the test runs fast.
+        let storage = FileDiagnosticsStorage(
+            fileURL: tmp,
+            maxLinesOnDisk: 50,
+            capAfterRotation: 10
+        )
+
+        // Pre-fill with > 50 lines by append-forcing many events. Also
+        // include enough bytes per line to push the file past the 64 KB
+        // pre-rotation-check threshold (each record is ~170-200 bytes,
+        // but rotation only triggers beyond 64 KB). Stuff filler text
+        // into the TargetBundleID-sanitized form via repeated insertion
+        // failures which carry a bundle string.
+        for _ in 0..<400 {
+            try await storage.append(DiagnosticRecord(
+                event: .insertionFailure(
+                    method: .direct,
+                    targetBundleID: .init("com.example.longname.padding.for.bytes"),
+                    reason: .unknown
+                )
+            ))
+        }
+
+        let loaded = try await storage.load()
+        #expect(loaded.count <= 50,
+                "After 400 appends, file should be rotated at cap 50; got \(loaded.count) lines")
+        #expect(loaded.count >= 10,
+                "After rotation, file should hold at least capAfterRotation=10 lines")
+    }
+
+    @Test("FileDiagnosticsStorage preserves line order after rotation (keeps tail)")
+    func fileStoragePreservesTailAfterRotation() async throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("diag-tail-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let storage = FileDiagnosticsStorage(
+            fileURL: tmp,
+            maxLinesOnDisk: 50,
+            capAfterRotation: 10
+        )
+
+        // Use distinct error codes so we can verify which records survived.
+        let errorCodes: [DiagnosticEvent.StartupErrorCode] = [
+            .preferencesCorrupt, .migrationFailed, .hotkeyTaken,
+            .inputSystemUnavailable, .unknown
+        ]
+        // Pre-fill: cycle through error codes a lot of times.
+        for i in 0..<400 {
+            let code = errorCodes[i % errorCodes.count]
+            try await storage.append(DiagnosticRecord(
+                event: .startupFailure(phase: .hotkeyRegistration, errorCode: code)
+            ))
+        }
+
+        let loaded = try await storage.load()
+        // After rotation, the last records written should still be in the
+        // file. The very last append (index 399) had code errorCodes[399 % 5]
+        // = errorCodes[4] = .unknown. It must survive.
+        guard let last = loaded.last else {
+            Issue.record("No records loaded")
+            return
+        }
+        if case .startupFailure(_, let code) = last.event {
+            #expect(code == .unknown,
+                    "Rotation should keep the tail; last record's code should match the last written")
+        } else {
+            Issue.record("Expected startupFailure event, got \(last.event)")
+        }
+    }
 }
