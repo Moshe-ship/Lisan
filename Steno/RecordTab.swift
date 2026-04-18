@@ -125,37 +125,45 @@ struct RecordTab: View {
             || combined.contains("input monitoring")
     }
 
-    private var errorBanner: some View {
-        HStack(spacing: StenoDesign.sm) {
-            RoundedRectangle(cornerRadius: StenoDesign.radiusTiny)
-                .fill(StenoDesign.error)
-                .frame(width: StenoDesign.borderHeavy)
+    /// Collapses the two possible error sources (hotkey registration and
+    /// last runtime error) into a single short line for the pill banner.
+    /// If both are set, the hotkey message wins because it is usually the
+    /// blocking one; full detail is always available in Settings →
+    /// Diagnostics.
+    private var compactErrorText: String {
+        if !controller.hotkeyRegistrationMessage.isEmpty {
+            return controller.hotkeyRegistrationMessage
+        }
+        return controller.lastError
+    }
 
-            VStack(alignment: .leading, spacing: StenoDesign.xs) {
-                if !controller.hotkeyRegistrationMessage.isEmpty {
-                    Text(controller.hotkeyRegistrationMessage)
-                        .font(StenoDesign.caption())
-                        .foregroundStyle(StenoDesign.error)
+    private var errorBanner: some View {
+        // Compact single-line pill. Previous design had a full-height red bar
+        // and a VStack that blew up for multi-message states, making the banner
+        // dominate the Record tab even when the message was a one-liner
+        // permission prompt. This version stays ~32pt tall and reads left→right:
+        // icon · message · action · dismiss.
+        HStack(spacing: StenoDesign.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(StenoDesign.caption())
+                .foregroundStyle(StenoDesign.error)
+
+            Text(compactErrorText)
+                .font(StenoDesign.caption())
+                .foregroundStyle(StenoDesign.error)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            if isPermissionRelated {
+                Button("Grant") {
+                    PermissionDiagnostics.openAccessibilitySettings()
                 }
-                if !controller.lastError.isEmpty {
-                    Text(controller.lastError)
-                        .font(StenoDesign.caption())
-                        .foregroundStyle(StenoDesign.error)
-                }
-                if isPermissionRelated {
-                    Button {
-                        PermissionDiagnostics.openAccessibilitySettings()
-                    } label: {
-                        Text("Open Settings")
-                            .font(StenoDesign.caption())
-                            .foregroundStyle(StenoDesign.accent)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open system settings for permissions")
-                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .accessibilityLabel("Open system settings for permissions")
             }
 
-            Spacer()
+            Spacer(minLength: StenoDesign.xs)
 
             Button {
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: StenoDesign.animationNormal)) {
@@ -168,14 +176,14 @@ struct RecordTab: View {
                     .foregroundStyle(StenoDesign.textSecondary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss error")
+            .accessibilityLabel("Dismiss")
         }
-        .padding(StenoDesign.md)
-        .background(StenoDesign.surface)
-        .clipShape(RoundedRectangle(cornerRadius: StenoDesign.radiusSmall))
+        .padding(.horizontal, StenoDesign.sm)
+        .padding(.vertical, StenoDesign.xs)
+        .background(StenoDesign.errorBackground)
+        .clipShape(Capsule())
         .overlay(
-            RoundedRectangle(cornerRadius: StenoDesign.radiusSmall)
-                .stroke(StenoDesign.errorBorder, lineWidth: StenoDesign.borderNormal)
+            Capsule().stroke(StenoDesign.errorBorder, lineWidth: 1)
         )
     }
 

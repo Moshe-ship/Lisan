@@ -18,11 +18,11 @@ revoking previous TCC grants via `tccutil reset All io.lisanapp.lisan`).
 
 ```bash
 cd "$(mktemp -d)"
-gh release download v0.2.1 --repo Moshe-ship/Lisan --pattern "Lisan-v0.2.1.zip"
-unzip -q Lisan-v0.2.1.zip
-mv Lisan-v0.2.1/Lisan.app /Applications/
+gh release download v0.3.0 --repo Moshe-ship/Lisan --pattern "Lisan-v0.3.0.zip"
+unzip -q Lisan-v0.3.0.zip
+mv Lisan-v0.3.0/Lisan.app /Applications/
 mkdir -p ~/vendor
-ln -sf "$(pwd)/Lisan-v0.2.1/vendor/whisper.cpp" ~/vendor/whisper.cpp
+ln -sf "$(pwd)/Lisan-v0.3.0/vendor/whisper.cpp" ~/vendor/whisper.cpp
 ```
 
 ✅ PASS when: `/Applications/Lisan.app` exists and `~/vendor/whisper.cpp/build/bin/whisper-cli` resolves.
@@ -119,4 +119,4 @@ are intentionally manual for now.
 
 ## History
 
-- 2026-04-17 — Checklist created for v0.2.1. All 7 items pass locally on macOS 26.3 with a fresh notarized install.
+- 2026-04-17 — Checklist created for v0.3.0. All 7 items pass locally on macOS 26.3 with a fresh notarized install.
