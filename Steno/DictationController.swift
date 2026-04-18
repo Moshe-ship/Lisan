@@ -48,6 +48,7 @@ final class DictationController: ObservableObject {
     private let menuBar = MenuBarController()
     private var recordingTimer: Timer?
     private var terminationTask: Task<Void, Never>?
+    private var activationTask: Task<Void, Never>?
 
     init(
         hotkey: MacHotkeyMonitor = MacHotkeyMonitor(),
@@ -120,6 +121,22 @@ final class DictationController: ObservableObject {
                 break
             }
         }
+
+        // Re-poll permission state whenever the user returns to Lisan — this
+        // is the moment a user typically comes back from System Settings after
+        // flipping an Accessibility/Input Monitoring toggle. Without this, the
+        // red "permission required" banner sticks forever because the hotkey
+        // tap only tries to install once at launch and then gives up.
+        activationTask = Task { @MainActor [weak self] in
+            let notifications = NotificationCenter.default
+                .notifications(named: NSApplication.didBecomeActiveNotification)
+                .map { _ in () }
+
+            for await _ in notifications {
+                guard let self, self.hasBootstrapped else { continue }
+                self.refreshPermissionStatuses()
+            }
+        }
     }
 
     /// Idempotent shutdown: stops hotkeys, cancels in-flight work, releases media,
@@ -128,6 +145,8 @@ final class DictationController: ObservableObject {
     func teardown() {
         terminationTask?.cancel()
         terminationTask = nil
+        activationTask?.cancel()
+        activationTask = nil
         hotkey.stop()
         overlay.hide()
         activeStartTask?.cancel()

@@ -118,11 +118,85 @@ struct RecordTab: View {
         return parts.joined(separator: ". ")
     }
 
+    private enum BlockedPermission {
+        case accessibility
+        case inputMonitoring
+        case microphone
+    }
+
+    /// Resolves which permission is actually blocking — prefers concrete
+    /// not-yet-granted statuses over string-matching on the error text, so
+    /// the Grant button routes to the real pane, not whatever the first
+    /// error message happened to mention. Falls back to message parsing
+    /// only when every status is granted but a permission-flavored error
+    /// is still surfacing.
+    private var blockedPermission: BlockedPermission? {
+        if controller.accessibilityPermissionStatus != .granted
+            && bannerMentions("accessibility") {
+            return .accessibility
+        }
+        if controller.inputMonitoringPermissionStatus != .granted
+            && bannerMentions("input monitoring") {
+            return .inputMonitoring
+        }
+        if controller.microphonePermissionStatus != .granted
+            && bannerMentions("microphone") {
+            return .microphone
+        }
+        if bannerMentions("input monitoring") { return .inputMonitoring }
+        if bannerMentions("accessibility") { return .accessibility }
+        if bannerMentions("microphone") { return .microphone }
+        return nil
+    }
+
     private var isPermissionRelated: Bool {
-        let combined = (controller.lastError + controller.hotkeyRegistrationMessage).lowercased()
-        return combined.contains("accessibility")
-            || combined.contains("microphone")
-            || combined.contains("input monitoring")
+        blockedPermission != nil
+    }
+
+    private func bannerMentions(_ keyword: String) -> Bool {
+        let combined = (controller.lastError + " " + controller.hotkeyRegistrationMessage).lowercased()
+        return combined.contains(keyword)
+    }
+
+    private var grantLabel: String {
+        switch blockedPermission {
+        case .accessibility: return "Open Accessibility"
+        case .inputMonitoring: return "Open Input Monitoring"
+        case .microphone: return "Open Microphone"
+        case .none: return "Open Settings"
+        }
+    }
+
+    private func openRelevantSettings() {
+        switch blockedPermission {
+        case .accessibility: PermissionDiagnostics.openAccessibilitySettings()
+        case .inputMonitoring: PermissionDiagnostics.openInputMonitoringSettings()
+        case .microphone: PermissionDiagnostics.openMicrophoneSettings()
+        case .none: PermissionDiagnostics.openAccessibilitySettings()
+        }
+    }
+
+    /// Detects the "granted but macOS hasn't propagated to this process yet"
+    /// state: user has toggled the pane on, but the hotkey tap still can't
+    /// install. This happens because TCC caches per-process decisions until
+    /// relaunch. When we detect it, surface a Restart button so the user
+    /// doesn't have to guess.
+    private var needsRestart: Bool {
+        guard !controller.hotkeyRegistrationMessage.isEmpty else { return false }
+        let msg = controller.hotkeyRegistrationMessage.lowercased()
+        guard msg.contains("accessibility") || msg.contains("permission") else {
+            return false
+        }
+        return controller.accessibilityPermissionStatus == .granted
+    }
+
+    private func restartApp() {
+        let bundlePath = Bundle.main.bundleURL.path
+        let task = Process()
+        task.launchPath = "/usr/bin/open"
+        task.arguments = ["-n", bundlePath]
+        try? task.run()
+        NSApp.terminate(nil)
     }
 
     /// Collapses the two possible error sources (hotkey registration and
@@ -131,6 +205,9 @@ struct RecordTab: View {
     /// blocking one; full detail is always available in Settings →
     /// Diagnostics.
     private var compactErrorText: String {
+        if needsRestart {
+            return "Permission granted — restart Lisan to activate."
+        }
         if !controller.hotkeyRegistrationMessage.isEmpty {
             return controller.hotkeyRegistrationMessage
         }
@@ -154,13 +231,20 @@ struct RecordTab: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
 
-            if isPermissionRelated {
-                Button("Grant") {
-                    PermissionDiagnostics.openAccessibilitySettings()
+            if needsRestart {
+                Button("Restart Lisan") {
+                    restartApp()
                 }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
-                .accessibilityLabel("Open system settings for permissions")
+                .accessibilityLabel("Restart Lisan to apply granted permissions")
+            } else if isPermissionRelated {
+                Button(grantLabel) {
+                    openRelevantSettings()
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .accessibilityLabel(grantLabel)
             }
 
             Spacer(minLength: StenoDesign.xs)
