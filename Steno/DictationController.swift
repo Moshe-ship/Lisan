@@ -447,7 +447,10 @@ final class DictationController: ObservableObject {
             overlay.show(state: .transcribing)
 
             do {
-                let result = try await coordinator.stopPressToTalk(sessionID: sessionID)
+                let result = try await coordinator.stopPressToTalk(
+                    sessionID: sessionID,
+                    languageMode: preferences.dictation.languageMode
+                )
                 switch result.status {
                 case .inserted:
                     lastTranscript = result.insertedText

@@ -50,15 +50,18 @@ struct PermissionDiagnostics {
     }
 
     static func openAccessibilitySettings() {
-        openPrivacySecuritySettings()
+        // Deep-link directly to the Accessibility list, not the generic
+        // Privacy & Security landing page, so the user doesn't have to
+        // scroll to find the right row.
+        openSettingsURL("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
     }
 
     static func openMicrophoneSettings() {
-        openPrivacySecuritySettings()
+        openSettingsURL("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
     }
 
     static func openInputMonitoringSettings() {
-        openPrivacySecuritySettings()
+        openSettingsURL("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
     }
 
     static func revealCurrentAppInFinder() {
