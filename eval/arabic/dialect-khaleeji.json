@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "steno-benchmark-manifest/v1",
+  "benchmarkName": "Lisan Arabic Khaleeji (Gulf)",
+  "scoring": {
+    "normalization": {
+      "version": "steno-normalization-v1",
+      "lowercase": true,
+      "collapseWhitespace": true,
+      "trimWhitespace": true,
+      "stripPunctuation": true,
+      "keepApostrophes": true
+    }
+  },
+  "samples": [
+    { "id": "kha-001", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-001.wav", "referenceText": "شلونك اليوم", "languageHint": "ar" },
+    { "id": "kha-002", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-002.wav", "referenceText": "وش تسوي الحين", "languageHint": "ar" },
+    { "id": "kha-003", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-003.wav", "referenceText": "أبغى أشوفك بكرا", "languageHint": "ar" },
+    { "id": "kha-004", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-004.wav", "referenceText": "يعطيك العافية على التعب", "languageHint": "ar" },
+    { "id": "kha-005", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-005.wav", "referenceText": "ما عندي وقت اليوم", "languageHint": "ar" },
+    { "id": "kha-006", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-006.wav", "referenceText": "وش رايك نروح نتغدى", "languageHint": "ar" },
+    { "id": "kha-007", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-007.wav", "referenceText": "خلني أفكر في الموضوع", "languageHint": "ar" },
+    { "id": "kha-008", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-008.wav", "referenceText": "مشغول اليوم نشوفك بكرا", "languageHint": "ar" },
+    { "id": "kha-009", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-009.wav", "referenceText": "بسمع رأيك في هالفكرة", "languageHint": "ar" },
+    { "id": "kha-010", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-010.wav", "referenceText": "تكفى اتصل فيني بعدين", "languageHint": "ar" },
+    { "id": "kha-011", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-011.wav", "referenceText": "هذا الكلام ما يصير", "languageHint": "ar" },
+    { "id": "kha-012", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-012.wav", "referenceText": "الحمد لله كل شي تمام", "languageHint": "ar" },
+    { "id": "kha-013", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-013.wav", "referenceText": "يالله روح نام ارتاح", "languageHint": "ar" },
+    { "id": "kha-014", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-014.wav", "referenceText": "أبشرك الأمور ممشية", "languageHint": "ar" },
+    { "id": "kha-015", "dataset": "arabic-khaleeji", "audioPath": "audio/kha-015.wav", "referenceText": "الله يعينك على شغلك", "languageHint": "ar" }
+  ]
+}

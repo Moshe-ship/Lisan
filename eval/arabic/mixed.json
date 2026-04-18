@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "steno-benchmark-manifest/v1",
+  "benchmarkName": "Lisan bilingual (Arabic + English within a recording)",
+  "scoring": {
+    "normalization": {
+      "version": "steno-normalization-v1",
+      "lowercase": true,
+      "collapseWhitespace": true,
+      "trimWhitespace": true,
+      "stripPunctuation": true,
+      "keepApostrophes": true
+    }
+  },
+  "samples": [
+    { "id": "mix-001", "dataset": "arabic-mixed", "audioPath": "audio/mix-001.wav", "referenceText": "Send the report to Ahmed بعد الاجتماع", "languageHint": "auto" },
+    { "id": "mix-002", "dataset": "arabic-mixed", "audioPath": "audio/mix-002.wav", "referenceText": "الميتنغ is at ten o'clock صباحاً", "languageHint": "auto" },
+    { "id": "mix-003", "dataset": "arabic-mixed", "audioPath": "audio/mix-003.wav", "referenceText": "deploy the feature بعد مراجعة الكود", "languageHint": "auto" },
+    { "id": "mix-004", "dataset": "arabic-mixed", "audioPath": "audio/mix-004.wav", "referenceText": "أرسل invoice للعميل today", "languageHint": "auto" },
+    { "id": "mix-005", "dataset": "arabic-mixed", "audioPath": "audio/mix-005.wav", "referenceText": "ابدأ بـ Performance Max campaign", "languageHint": "auto" },
+    { "id": "mix-006", "dataset": "arabic-mixed", "audioPath": "audio/mix-006.wav", "referenceText": "هل ال API جاهز للاختبار", "languageHint": "auto" },
+    { "id": "mix-007", "dataset": "arabic-mixed", "audioPath": "audio/mix-007.wav", "referenceText": "Schedule a call مع الفريق بكرا", "languageHint": "auto" },
+    { "id": "mix-008", "dataset": "arabic-mixed", "audioPath": "audio/mix-008.wav", "referenceText": "نحتاج dashboard للإحصائيات اليومية", "languageHint": "auto" },
+    { "id": "mix-009", "dataset": "arabic-mixed", "audioPath": "audio/mix-009.wav", "referenceText": "العميل يطلب landing page جديدة", "languageHint": "auto" },
+    { "id": "mix-010", "dataset": "arabic-mixed", "audioPath": "audio/mix-010.wav", "referenceText": "push the commit بعد الاختبار", "languageHint": "auto" },
+    { "id": "mix-011", "dataset": "arabic-mixed", "audioPath": "audio/mix-011.wav", "referenceText": "هذه feature طلبها client زين", "languageHint": "auto" },
+    { "id": "mix-012", "dataset": "arabic-mixed", "audioPath": "audio/mix-012.wav", "referenceText": "راجع الـ pull request بأسرع وقت", "languageHint": "auto" },
+    { "id": "mix-013", "dataset": "arabic-mixed", "audioPath": "audio/mix-013.wav", "referenceText": "استخدم Supabase لل database", "languageHint": "auto" },
+    { "id": "mix-014", "dataset": "arabic-mixed", "audioPath": "audio/mix-014.wav", "referenceText": "هل عندك الـ access token", "languageHint": "auto" },
+    { "id": "mix-015", "dataset": "arabic-mixed", "audioPath": "audio/mix-015.wav", "referenceText": "الـ response time ممتاز جداً", "languageHint": "auto" },
+    { "id": "mix-016", "dataset": "arabic-mixed", "audioPath": "audio/mix-016.wav", "referenceText": "خذ backup قبل ما نكمل", "languageHint": "auto" },
+    { "id": "mix-017", "dataset": "arabic-mixed", "audioPath": "audio/mix-017.wav", "referenceText": "بعت لك الـ proposal بالإيميل", "languageHint": "auto" },
+    { "id": "mix-018", "dataset": "arabic-mixed", "audioPath": "audio/mix-018.wav", "referenceText": "هذا سلوك غير متوقع في الـ UI", "languageHint": "auto" },
+    { "id": "mix-019", "dataset": "arabic-mixed", "audioPath": "audio/mix-019.wav", "referenceText": "ship it إذا الـ tests خضراء", "languageHint": "auto" },
+    { "id": "mix-020", "dataset": "arabic-mixed", "audioPath": "audio/mix-020.wav", "referenceText": "الـ onboarding flow محتاج تحسين", "languageHint": "auto" }
+  ]
+}

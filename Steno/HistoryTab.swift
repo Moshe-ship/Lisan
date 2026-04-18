@@ -7,6 +7,7 @@ struct HistoryTab: View {
     @State private var searchQuery: String = ""
     @State private var expandedIDs: Set<UUID> = []
     @State private var currentTime = Date()
+    @State private var correctionTarget: TranscriptEntry?
 
     var body: some View {
         VStack(alignment: .leading, spacing: StenoDesign.md) {
@@ -83,6 +84,11 @@ struct HistoryTab: View {
         .padding(.vertical, StenoDesign.lg)
         .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now in
             currentTime = now
+        }
+        .sheet(item: $correctionTarget) { entry in
+            CorrectionMemorySheet(entry: entry) {
+                correctionTarget = nil
+            }
         }
     }
 
@@ -200,6 +206,12 @@ struct HistoryTab: View {
                 controller.pasteEntry(entry)
             } label: {
                 Label("Paste", systemImage: "doc.on.clipboard")
+            }
+            Divider()
+            Button {
+                correctionTarget = entry
+            } label: {
+                Label("Correct transcript…", systemImage: "pencil.and.list.clipboard")
             }
             Divider()
             Button(role: .destructive) {

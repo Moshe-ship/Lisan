@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "steno-benchmark-manifest/v1",
+  "benchmarkName": "Lisan Arabic MSA (fusha)",
+  "scoring": {
+    "normalization": {
+      "version": "steno-normalization-v1",
+      "lowercase": true,
+      "collapseWhitespace": true,
+      "trimWhitespace": true,
+      "stripPunctuation": true,
+      "keepApostrophes": true
+    }
+  },
+  "samples": [
+    { "id": "msa-001", "dataset": "arabic-msa", "audioPath": "audio/msa-001.wav", "referenceText": "السلام عليكم ورحمة الله", "languageHint": "ar" },
+    { "id": "msa-002", "dataset": "arabic-msa", "audioPath": "audio/msa-002.wav", "referenceText": "كيف حالك اليوم", "languageHint": "ar" },
+    { "id": "msa-003", "dataset": "arabic-msa", "audioPath": "audio/msa-003.wav", "referenceText": "هل لغتك العربية جيدة", "languageHint": "ar" },
+    { "id": "msa-004", "dataset": "arabic-msa", "audioPath": "audio/msa-004.wav", "referenceText": "هل يمكنك الكتابة بالعربية", "languageHint": "ar" },
+    { "id": "msa-005", "dataset": "arabic-msa", "audioPath": "audio/msa-005.wav", "referenceText": "أرجو أن ترسل لي التقرير قبل المساء", "languageHint": "ar" },
+    { "id": "msa-006", "dataset": "arabic-msa", "audioPath": "audio/msa-006.wav", "referenceText": "سنعقد اجتماعاً يوم الثلاثاء الساعة العاشرة صباحاً", "languageHint": "ar" },
+    { "id": "msa-007", "dataset": "arabic-msa", "audioPath": "audio/msa-007.wav", "referenceText": "شكراً جزيلاً على المساعدة", "languageHint": "ar" },
+    { "id": "msa-008", "dataset": "arabic-msa", "audioPath": "audio/msa-008.wav", "referenceText": "أعتذر عن التأخير في الرد", "languageHint": "ar" },
+    { "id": "msa-009", "dataset": "arabic-msa", "audioPath": "audio/msa-009.wav", "referenceText": "ما هي خطتنا للربع القادم", "languageHint": "ar" },
+    { "id": "msa-010", "dataset": "arabic-msa", "audioPath": "audio/msa-010.wav", "referenceText": "نحتاج إلى مراجعة الميزانية هذا الأسبوع", "languageHint": "ar" },
+    { "id": "msa-011", "dataset": "arabic-msa", "audioPath": "audio/msa-011.wav", "referenceText": "يرجى إرسال الفاتورة إلى قسم المحاسبة", "languageHint": "ar" },
+    { "id": "msa-012", "dataset": "arabic-msa", "audioPath": "audio/msa-012.wav", "referenceText": "العميل يريد تقريراً أسبوعياً عن الحملة", "languageHint": "ar" },
+    { "id": "msa-013", "dataset": "arabic-msa", "audioPath": "audio/msa-013.wav", "referenceText": "تم إرسال العرض التجاري بالبريد الإلكتروني", "languageHint": "ar" },
+    { "id": "msa-014", "dataset": "arabic-msa", "audioPath": "audio/msa-014.wav", "referenceText": "الطقس اليوم معتدل ولطيف", "languageHint": "ar" },
+    { "id": "msa-015", "dataset": "arabic-msa", "audioPath": "audio/msa-015.wav", "referenceText": "اللغة العربية لغة جميلة وعريقة", "languageHint": "ar" },
+    { "id": "msa-016", "dataset": "arabic-msa", "audioPath": "audio/msa-016.wav", "referenceText": "أحتاج إلى كوب من القهوة السوداء", "languageHint": "ar" },
+    { "id": "msa-017", "dataset": "arabic-msa", "audioPath": "audio/msa-017.wav", "referenceText": "سأكون في المكتب بعد ساعة", "languageHint": "ar" },
+    { "id": "msa-018", "dataset": "arabic-msa", "audioPath": "audio/msa-018.wav", "referenceText": "هل يمكنني الاتصال بك لاحقاً", "languageHint": "ar" },
+    { "id": "msa-019", "dataset": "arabic-msa", "audioPath": "audio/msa-019.wav", "referenceText": "الإجابة ستكون بعد يومين إن شاء الله", "languageHint": "ar" },
+    { "id": "msa-020", "dataset": "arabic-msa", "audioPath": "audio/msa-020.wav", "referenceText": "هذا الموضوع يحتاج إلى دراسة معمقة", "languageHint": "ar" },
+    { "id": "msa-021", "dataset": "arabic-msa", "audioPath": "audio/msa-021.wav", "referenceText": "الرياض هي عاصمة المملكة العربية السعودية", "languageHint": "ar" },
+    { "id": "msa-022", "dataset": "arabic-msa", "audioPath": "audio/msa-022.wav", "referenceText": "نحن بحاجة إلى مزيد من البيانات لاتخاذ القرار", "languageHint": "ar" },
+    { "id": "msa-023", "dataset": "arabic-msa", "audioPath": "audio/msa-023.wav", "referenceText": "الفريق يعمل على تطوير المنتج الجديد", "languageHint": "ar" },
+    { "id": "msa-024", "dataset": "arabic-msa", "audioPath": "audio/msa-024.wav", "referenceText": "من فضلك أرسل لي رقم الفاتورة", "languageHint": "ar" },
+    { "id": "msa-025", "dataset": "arabic-msa", "audioPath": "audio/msa-025.wav", "referenceText": "المشروع يحتاج إلى مزيد من الوقت والجهد", "languageHint": "ar" },
+    { "id": "msa-026", "dataset": "arabic-msa", "audioPath": "audio/msa-026.wav", "referenceText": "تم توقيع العقد بنجاح مع الشركة", "languageHint": "ar" },
+    { "id": "msa-027", "dataset": "arabic-msa", "audioPath": "audio/msa-027.wav", "referenceText": "أود أن أحجز موعداً مع الطبيب", "languageHint": "ar" },
+    { "id": "msa-028", "dataset": "arabic-msa", "audioPath": "audio/msa-028.wav", "referenceText": "سأراجع التفاصيل وأعود إليك قريباً", "languageHint": "ar" },
+    { "id": "msa-029", "dataset": "arabic-msa", "audioPath": "audio/msa-029.wav", "referenceText": "هل لديك وقت للاجتماع هذا المساء", "languageHint": "ar" },
+    { "id": "msa-030", "dataset": "arabic-msa", "audioPath": "audio/msa-030.wav", "referenceText": "أتمنى لك يوماً سعيداً ومليئاً بالإنجاز", "languageHint": "ar" }
+  ]
+}

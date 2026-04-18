@@ -373,6 +373,38 @@ final class DictationController: ObservableObject {
         }
     }
 
+    /// Adds (or upserts) a lexicon entry from a user correction. Dedupes
+    /// by (term, scope) — repeating a correction updates the replacement
+    /// instead of creating a duplicate. Persists to preferences and
+    /// rebuilds the live cleanup runtime so the correction is active for
+    /// the next dictation immediately.
+    func addLexiconEntry(term: String, preferred: String, scope: Scope) {
+        let trimmedTerm = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPreferred = preferred.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTerm.isEmpty, !trimmedPreferred.isEmpty,
+              trimmedTerm != trimmedPreferred else {
+            return
+        }
+        var snapshot = preferences
+        let entry = LexiconEntry(term: trimmedTerm, preferred: trimmedPreferred, scope: scope)
+        if let existing = snapshot.lexiconEntries.firstIndex(where: {
+            $0.term == entry.term && $0.scope == entry.scope
+        }) {
+            snapshot.lexiconEntries[existing] = entry
+        } else {
+            snapshot.lexiconEntries.append(entry)
+        }
+        preferences = snapshot
+
+        Task {
+            await preferencesStore.save(snapshot)
+            await rebuildRuntime()
+            await MainActor.run {
+                status = "Saved correction: \(entry.term) → \(entry.preferred)"
+            }
+        }
+    }
+
     func refreshHistory() async {
         let all = await historyStore.recent(limit: 500)
         let thirtyDaysAgo = Date().addingTimeInterval(-30 * 24 * 60 * 60)

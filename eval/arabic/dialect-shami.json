@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "steno-benchmark-manifest/v1",
+  "benchmarkName": "Lisan Arabic Shami (Levantine)",
+  "scoring": {
+    "normalization": {
+      "version": "steno-normalization-v1",
+      "lowercase": true,
+      "collapseWhitespace": true,
+      "trimWhitespace": true,
+      "stripPunctuation": true,
+      "keepApostrophes": true
+    }
+  },
+  "samples": [
+    { "id": "sha-001", "dataset": "arabic-shami", "audioPath": "audio/sha-001.wav", "referenceText": "كيفك شو أخبارك", "languageHint": "ar" },
+    { "id": "sha-002", "dataset": "arabic-shami", "audioPath": "audio/sha-002.wav", "referenceText": "شو عم تعمل هلأ", "languageHint": "ar" },
+    { "id": "sha-003", "dataset": "arabic-shami", "audioPath": "audio/sha-003.wav", "referenceText": "بدي آكل شي طيب", "languageHint": "ar" },
+    { "id": "sha-004", "dataset": "arabic-shami", "audioPath": "audio/sha-004.wav", "referenceText": "ما بعرف شو بدي أعمل", "languageHint": "ar" },
+    { "id": "sha-005", "dataset": "arabic-shami", "audioPath": "audio/sha-005.wav", "referenceText": "طب كيف حالك شو اخبارك شو ببالك", "languageHint": "ar" },
+    { "id": "sha-006", "dataset": "arabic-shami", "audioPath": "audio/sha-006.wav", "referenceText": "مرحبا كيفكم شو الأخبار", "languageHint": "ar" },
+    { "id": "sha-007", "dataset": "arabic-shami", "audioPath": "audio/sha-007.wav", "referenceText": "لحظة بس رح أرجع عليك", "languageHint": "ar" },
+    { "id": "sha-008", "dataset": "arabic-shami", "audioPath": "audio/sha-008.wav", "referenceText": "هاد الكلام مش صحيح", "languageHint": "ar" },
+    { "id": "sha-009", "dataset": "arabic-shami", "audioPath": "audio/sha-009.wav", "referenceText": "شو رايك بهالفكرة", "languageHint": "ar" },
+    { "id": "sha-010", "dataset": "arabic-shami", "audioPath": "audio/sha-010.wav", "referenceText": "يا زلمة هاد اشي عظيم", "languageHint": "ar" },
+    { "id": "sha-011", "dataset": "arabic-shami", "audioPath": "audio/sha-011.wav", "referenceText": "ما في مشكلة حبيبي", "languageHint": "ar" },
+    { "id": "sha-012", "dataset": "arabic-shami", "audioPath": "audio/sha-012.wav", "referenceText": "تعال لعندي بالمكتب بكرة", "languageHint": "ar" },
+    { "id": "sha-013", "dataset": "arabic-shami", "audioPath": "audio/sha-013.wav", "referenceText": "اشتقتلك كتير يا صديقي", "languageHint": "ar" },
+    { "id": "sha-014", "dataset": "arabic-shami", "audioPath": "audio/sha-014.wav", "referenceText": "هلأ رح نشوف الحل", "languageHint": "ar" },
+    { "id": "sha-015", "dataset": "arabic-shami", "audioPath": "audio/sha-015.wav", "referenceText": "منيح كتير شكرا الك", "languageHint": "ar" }
+  ]
+}
