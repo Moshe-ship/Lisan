@@ -227,6 +227,158 @@ struct WhisperCLITranscriptionEngineTests {
         #expect(captured.contains("auto"), "auto mode must pass 'auto' as the language code to enable detection")
     }
 
+    // MARK: - Two-pass auto-detect tests
+
+    @Test("Two-pass auto-detect: -dl preflight result replaces -l auto when recognized")
+    func twoPassDetectReplacesAuto() async throws {
+        let captureID = UUID().uuidString
+        let captureFile = "/tmp/captured_two_pass_args_\(captureID).txt"
+        defer { try? FileManager.default.removeItem(atPath: captureFile) }
+
+        // Fake whisper-cli: first invocation uses -dl and emits a known
+        // "auto-detected language: ar" stderr line. Second invocation
+        // captures its args so the test can verify -l ar was passed.
+        let scriptURL = try makeExecutableScript(
+            """
+            #!/bin/sh
+            all_args="$*"
+            output_base=""
+            saw_dl=0
+            while [ "$#" -gt 0 ]; do
+              case "$1" in
+                -of) shift; output_base="$1" ;;
+                -dl) saw_dl=1 ;;
+              esac
+              shift
+            done
+            if [ "$saw_dl" -eq 1 ]; then
+              echo "whisper_full: auto-detected language: ar (p = 0.88)" >&2
+              exit 0
+            fi
+            printf "%s" "$all_args" > \(captureFile)
+            printf " hello arabic \\n" > "${output_base}.txt"
+            exit 0
+            """
+        )
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let audioURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("audio-\(UUID().uuidString).wav")
+        try Data().write(to: audioURL)
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+
+        let engine = WhisperCLITranscriptionEngine(
+            config: .init(
+                whisperCLIPath: scriptURL,
+                modelPath: URL(fileURLWithPath: "/tmp/fake.bin"),
+                twoPassAutoDetect: true
+            )
+        )
+
+        _ = try await engine.transcribe(audioURL: audioURL, languageHints: [LanguageMode.auto.rawValue])
+
+        let captured = try String(contentsOf: URL(fileURLWithPath: captureFile), encoding: .utf8)
+        #expect(captured.contains("-l ar"), "Two-pass mode should forward detected 'ar' as -l ar on the real decode")
+        #expect(!captured.contains("-l auto"), "When preflight detects ar, -l auto must NOT appear on the real decode")
+    }
+
+    @Test("Two-pass auto-detect: unknown preflight result falls back to -l auto")
+    func twoPassDetectFallsBackOnUnknown() async throws {
+        let captureID = UUID().uuidString
+        let captureFile = "/tmp/captured_two_pass_args_\(captureID).txt"
+        defer { try? FileManager.default.removeItem(atPath: captureFile) }
+
+        // Preflight says "sv" (Swedish) — typical misfire on noise. Our
+        // allow-list only forces en/ar; everything else becomes -l auto
+        // so the decoder isn't locked into a wrong language.
+        let scriptURL = try makeExecutableScript(
+            """
+            #!/bin/sh
+            all_args="$*"
+            output_base=""
+            saw_dl=0
+            while [ "$#" -gt 0 ]; do
+              case "$1" in
+                -of) shift; output_base="$1" ;;
+                -dl) saw_dl=1 ;;
+              esac
+              shift
+            done
+            if [ "$saw_dl" -eq 1 ]; then
+              echo "whisper_full: auto-detected language: sv (p = 0.31)" >&2
+              exit 0
+            fi
+            printf "%s" "$all_args" > \(captureFile)
+            printf " fallback \\n" > "${output_base}.txt"
+            exit 0
+            """
+        )
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let audioURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("audio-\(UUID().uuidString).wav")
+        try Data().write(to: audioURL)
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+
+        let engine = WhisperCLITranscriptionEngine(
+            config: .init(
+                whisperCLIPath: scriptURL,
+                modelPath: URL(fileURLWithPath: "/tmp/fake.bin"),
+                twoPassAutoDetect: true
+            )
+        )
+
+        _ = try await engine.transcribe(audioURL: audioURL, languageHints: [LanguageMode.auto.rawValue])
+
+        let captured = try String(contentsOf: URL(fileURLWithPath: captureFile), encoding: .utf8)
+        #expect(captured.contains("-l auto"), "Unknown preflight detections must fall back to -l auto on the real decode")
+        #expect(!captured.contains("-l sv"), "Swedish detections must not be forced — allow-list protects against noise misfires")
+    }
+
+    @Test("Two-pass auto-detect: disabled by default, single -dl never runs")
+    func twoPassDisabledByDefault() async throws {
+        let captureID = UUID().uuidString
+        let captureFile = "/tmp/captured_single_pass_args_\(captureID).txt"
+        defer { try? FileManager.default.removeItem(atPath: captureFile) }
+
+        let scriptURL = try makeExecutableScript(
+            """
+            #!/bin/sh
+            output_base=""
+            for arg in "$@"; do
+              if [ "$arg" = "-dl" ]; then
+                echo "UNEXPECTED: -dl was passed" >&2
+                exit 99
+              fi
+            done
+            while [ "$#" -gt 0 ]; do
+              if [ "$1" = "-of" ]; then shift; output_base="$1"; fi
+              shift
+            done
+            printf "%s " "$@" > \(captureFile)
+            printf " single pass \\n" > "${output_base}.txt"
+            exit 0
+            """
+        )
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let audioURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("audio-\(UUID().uuidString).wav")
+        try Data().write(to: audioURL)
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+
+        let engine = WhisperCLITranscriptionEngine(
+            config: .init(
+                whisperCLIPath: scriptURL,
+                modelPath: URL(fileURLWithPath: "/tmp/fake.bin")
+                // twoPassAutoDetect defaults to false
+            )
+        )
+
+        let result = try await engine.transcribe(audioURL: audioURL, languageHints: [LanguageMode.auto.rawValue])
+        #expect(result.text == "single pass")
+    }
+
     // MARK: - Vocabulary file tests
 
     @Test("Vocabulary file content is space-joined and passed as --prompt")

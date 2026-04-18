@@ -22,15 +22,23 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
         public var whisperCLIPath: URL
         public var modelPath: URL
         public var additionalArguments: [String]
+        /// When true, auto-mode transcriptions run a `-dl` language
+        /// detection preflight before the main decode. Costs one extra
+        /// model-load but avoids whisper's mel-probe bias toward English
+        /// on short Arabic clips (the common misfire for Gulf/Levantine
+        /// speakers). Off by default — opt-in for accuracy over latency.
+        public var twoPassAutoDetect: Bool
 
         public init(
             whisperCLIPath: URL,
             modelPath: URL,
-            additionalArguments: [String] = []
+            additionalArguments: [String] = [],
+            twoPassAutoDetect: Bool = false
         ) {
             self.whisperCLIPath = whisperCLIPath
             self.modelPath = modelPath
             self.additionalArguments = additionalArguments
+            self.twoPassAutoDetect = twoPassAutoDetect
         }
     }
 
@@ -115,14 +123,19 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
         // Determine language: explicit hint wins; auto mode passes `-l auto`
         // (whisper-cli's -l default is "en" so omitting the flag silently
         // forces English, not language detection).
-        if let firstHint = languageHints.first,
-           let mode = LanguageMode(rawValue: firstHint.lowercased()),
-           let langArg = mode.whisperLanguageArg {
-            args.append(contentsOf: ["-l", langArg])
-        } else if let firstHint = languageHints.first,
-                  firstHint.lowercased() != "auto",
-                  let languageCode = normalizeLanguage(from: firstHint) {
-            args.append(contentsOf: ["-l", languageCode])
+        //
+        // Two-pass path: when config opts in AND the hint resolves to auto,
+        // run a `-dl` preflight to get a detected language code, then use
+        // that as an explicit `-l` on the real decode. This trades one extra
+        // model-load for materially better Arabic recognition on short
+        // clips, where whisper's built-in single-pass auto-detect skews
+        // English.
+        let resolvedLang = await resolveLanguage(
+            audioURL: audioURL,
+            hint: languageHints.first
+        )
+        if let lang = resolvedLang {
+            args.append(contentsOf: ["-l", lang])
         }
 
         // Vocabulary file: pass as --prompt to bias recognition toward custom terms
@@ -155,6 +168,73 @@ public struct WhisperCLITranscriptionEngine: TranscriptionEngine, Sendable {
         let text = Self.stripArtifacts(rawText)
 
         return RawTranscript(text: text)
+    }
+
+    /// Returns the language code to pass to whisper-cli. If the hint resolves
+    /// to a specific LanguageMode (en, ar, auto), honor it directly. For
+    /// auto mode with two-pass enabled, run a -dl preflight and prefer the
+    /// detected code; fall back to "auto" if the preflight fails or returns
+    /// something we don't want to force (e.g. non-en/non-ar).
+    private func resolveLanguage(audioURL: URL, hint: String?) async -> String? {
+        guard let hint else { return nil }
+
+        if let mode = LanguageMode(rawValue: hint.lowercased()),
+           let langArg = mode.whisperLanguageArg {
+            if mode == .auto, config.twoPassAutoDetect,
+               let detected = await detectLanguage(audioURL: audioURL) {
+                return detected
+            }
+            return langArg
+        }
+
+        if hint.lowercased() != "auto",
+           let languageCode = normalizeLanguage(from: hint) {
+            return languageCode
+        }
+        return nil
+    }
+
+    /// Runs `whisper-cli -dl` on the clip and parses the auto-detected
+    /// language code from stderr. Returns nil if detection fails, if the
+    /// detected language is not one we want to force (only en/ar pass
+    /// through — other detections fall back to single-pass auto so we
+    /// don't lock the decoder into Swedish because whisper's detector
+    /// misfired on breath noise).
+    private func detectLanguage(audioURL: URL) async -> String? {
+        var args: [String] = [
+            "-m", config.modelPath.path,
+            "-f", audioURL.path,
+            "-dl"
+        ]
+        args.append(contentsOf: config.additionalArguments)
+
+        let result: ProcessExecutionResult
+        do {
+            result = try await ProcessRunner.run(
+                executableURL: config.whisperCLIPath,
+                arguments: args,
+                environment: cachedEnvironment,
+                standardOutput: FileHandle.nullDevice
+            )
+        } catch {
+            return nil
+        }
+        guard result.terminationStatus == 0 else { return nil }
+
+        let stderrText = String(data: result.standardError, encoding: .utf8) ?? ""
+        // whisper.cpp prints: "auto-detected language: <code> (p = <float>)"
+        let marker = "auto-detected language: "
+        guard let markerRange = stderrText.range(of: marker) else { return nil }
+        let tail = stderrText[markerRange.upperBound...]
+        let code = tail.prefix { $0.isLetter || $0 == "-" }
+        let normalized = String(code).lowercased()
+        guard !normalized.isEmpty else { return nil }
+
+        // Allow-list: we only force the decoder into languages we
+        // actually support. A Swedish detection is almost always a
+        // misfire on noise, so fall back to plain -l auto which is
+        // more resilient in practice.
+        return (normalized == "en" || normalized == "ar") ? normalized : "auto"
     }
 
     private func normalizeLanguage(from hint: String) -> String? {

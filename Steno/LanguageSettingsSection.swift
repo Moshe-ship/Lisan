@@ -25,9 +25,22 @@ struct LanguageSettingsSection: View {
                     Image(systemName: "info.circle")
                         .font(StenoDesign.caption())
                         .foregroundStyle(StenoDesign.textSecondary)
-                    Text("Auto chooses one language per recording, not per word. For mixed Arabic + English, Auto picks the dominant language of each press-to-talk session.")
+                    Text("Auto picks one language per recording, not per word — whisper.cpp does not code-switch. For mixed speech, hold a pure phrase in one language at a time.")
                         .font(StenoDesign.caption())
                         .foregroundStyle(StenoDesign.textSecondary)
+                }
+
+                if preferences.dictation.languageMode == .auto {
+                    Toggle(isOn: $preferences.dictation.twoPassAutoDetect) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Accurate auto-detect (slower)")
+                                .font(StenoDesign.body())
+                            Text("Runs a short whisper -dl preflight before each transcription. Fixes the English-bias whisper shows on short Arabic clips, at ~300-500ms extra latency per dictation. Recommended if Auto keeps picking English for your Arabic.")
+                                .font(StenoDesign.caption())
+                                .foregroundStyle(StenoDesign.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
 
                 Divider()

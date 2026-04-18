@@ -677,7 +677,8 @@ private struct DictationRuntimeFactory {
             config: .init(
                 whisperCLIPath: whisperCLIPath,
                 modelPath: modelPath,
-                additionalArguments: extraArgs
+                additionalArguments: extraArgs,
+                twoPassAutoDetect: snapshot.dictation.twoPassAutoDetect
             ),
             vocabularyFileURL: vocabURL
         )

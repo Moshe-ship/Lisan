@@ -57,6 +57,11 @@ struct AppPreferences: Codable, Sendable, Equatable {
         var arabicOptions: ArabicNormalizationOptions
         /// Convert ASCII `,` `;` `?` to Arabic `،` `؛` `؟` inside Arabic chunks.
         var arabicPunctuationEnabled: Bool
+        /// When true and languageMode is .auto, run a whisper `-dl`
+        /// preflight to detect language before full transcription. More
+        /// accurate for short Arabic clips; costs one extra model-load per
+        /// dictation. Off by default.
+        var twoPassAutoDetect: Bool
 
         init(
             whisperCLIPath: String,
@@ -68,7 +73,8 @@ struct AppPreferences: Codable, Sendable, Equatable {
             vocabularyFilePath: String = "",
             bilingualCleanupEnabled: Bool = true,
             arabicOptions: ArabicNormalizationOptions = .default,
-            arabicPunctuationEnabled: Bool = true
+            arabicPunctuationEnabled: Bool = true,
+            twoPassAutoDetect: Bool = false
         ) {
             self.whisperCLIPath = whisperCLIPath
             self.modelPath = modelPath
@@ -80,6 +86,7 @@ struct AppPreferences: Codable, Sendable, Equatable {
             self.bilingualCleanupEnabled = bilingualCleanupEnabled
             self.arabicOptions = arabicOptions
             self.arabicPunctuationEnabled = arabicPunctuationEnabled
+            self.twoPassAutoDetect = twoPassAutoDetect
         }
 
         init(from decoder: Decoder) throws {
@@ -95,6 +102,7 @@ struct AppPreferences: Codable, Sendable, Equatable {
             bilingualCleanupEnabled = try container.decodeIfPresent(Bool.self, forKey: .bilingualCleanupEnabled) ?? true
             arabicOptions = try container.decodeIfPresent(ArabicNormalizationOptions.self, forKey: .arabicOptions) ?? .default
             arabicPunctuationEnabled = try container.decodeIfPresent(Bool.self, forKey: .arabicPunctuationEnabled) ?? true
+            twoPassAutoDetect = try container.decodeIfPresent(Bool.self, forKey: .twoPassAutoDetect) ?? false
         }
 
         mutating func updateModelPath(_ newModelPath: String) {
