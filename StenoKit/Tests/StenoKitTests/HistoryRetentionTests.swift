@@ -154,6 +154,102 @@ func historyTogglingOffDeletesExistingFile() async throws {
     )
 }
 
+@Test("Retention: tightening retentionDays at runtime prunes immediately")
+func historyTighteningRetentionPrunesNow() async throws {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("history-tighten-\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let store = HistoryStore(
+        storageURL: tmp,
+        clipboardService: StubClipboardService(),
+        maxEntries: 500,
+        persistOnDisk: true,
+        retentionDays: 30
+    )
+
+    // Seed with entries at varying ages. All survive 30-day retention.
+    let threeDaysAgo = TranscriptEntry(
+        id: UUID(),
+        createdAt: Date().addingTimeInterval(-3 * 86_400),
+        appBundleID: "com.three",
+        rawText: "three days", cleanText: "three days",
+        audioURL: nil, insertionStatus: .inserted
+    )
+    let tenDaysAgo = TranscriptEntry(
+        id: UUID(),
+        createdAt: Date().addingTimeInterval(-10 * 86_400),
+        appBundleID: "com.ten",
+        rawText: "ten days", cleanText: "ten days",
+        audioURL: nil, insertionStatus: .inserted
+    )
+    let twentyFiveDaysAgo = TranscriptEntry(
+        id: UUID(),
+        createdAt: Date().addingTimeInterval(-25 * 86_400),
+        appBundleID: "com.twentyfive",
+        rawText: "twentyfive", cleanText: "twentyfive",
+        audioURL: nil, insertionStatus: .inserted
+    )
+    try await store.append(entry: twentyFiveDaysAgo)
+    try await store.append(entry: tenDaysAgo)
+    try await store.append(entry: threeDaysAgo)
+
+    let before = await store.recent(limit: 100)
+    #expect(before.count == 3, "All three entries should survive the initial 30-day window")
+
+    // Tighten to 7 days. Entries older than that must disappear
+    // immediately — in memory AND on disk.
+    await store.setRetentionDays(7)
+
+    let after = await store.recent(limit: 100)
+    let afterIDs = Set(after.map { $0.appBundleID })
+    #expect(afterIDs == ["com.three"],
+            "Tightening to 7 days should drop 10-day and 25-day entries, got: \(afterIDs)")
+
+    // Confirm the on-disk JSON reflects the pruning, not just memory.
+    let raw = try String(contentsOf: tmp, encoding: .utf8)
+    #expect(raw.contains("com.three"))
+    #expect(!raw.contains("com.ten"), "10-day entry leaked to disk after tightening")
+    #expect(!raw.contains("com.twentyfive"), "25-day entry leaked to disk after tightening")
+}
+
+@Test("Retention: widening retentionDays does not resurrect already-dropped entries")
+func historyWideningDoesNotResurrectDropped() async throws {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("history-widen-\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let store = HistoryStore(
+        storageURL: tmp,
+        clipboardService: StubClipboardService(),
+        maxEntries: 500,
+        persistOnDisk: true,
+        retentionDays: 3
+    )
+
+    // This entry is older than the initial 3-day window, so `append`
+    // itself will immediately prune it during the pruneExpired call.
+    try await store.append(entry: TranscriptEntry(
+        id: UUID(),
+        createdAt: Date().addingTimeInterval(-10 * 86_400),
+        appBundleID: "com.lost",
+        rawText: "lost", cleanText: "lost",
+        audioURL: nil, insertionStatus: .inserted
+    ))
+
+    let beforeWiden = await store.recent(limit: 100)
+    #expect(beforeWiden.isEmpty,
+            "10-day-old entry should have been dropped under 3-day retention")
+
+    // Widen to 30 days. The already-dropped entry must not come back —
+    // pruning is destructive, not a filter, so widening is a no-op
+    // against existing state.
+    await store.setRetentionDays(30)
+    let afterWiden = await store.recent(limit: 100)
+    #expect(afterWiden.isEmpty,
+            "Widening retention shouldn't resurrect entries already pruned")
+}
+
 @Test("On-disk history file is written with 0600 permissions")
 func historyFilePermissions() async throws {
     let tmp = FileManager.default.temporaryDirectory

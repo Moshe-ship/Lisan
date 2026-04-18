@@ -607,10 +607,14 @@ final class DictationController: ObservableObject {
 
         // Push the user's history-persistence choice into the store.
         // When flipping the toggle off, the store removes the on-disk
-        // file immediately — no delayed cleanup surprises.
+        // file immediately — no delayed cleanup surprises. Retention
+        // days is also pushed so tightening the window prunes now
+        // rather than waiting for the next dictation / app restart.
         let persist = newValue.general.persistHistoryOnDisk
+        let retention = newValue.general.historyRetentionDays
         Task { [historyStore] in
             await historyStore.setPersistOnDisk(persist)
+            await historyStore.setRetentionDays(retention)
         }
     }
 

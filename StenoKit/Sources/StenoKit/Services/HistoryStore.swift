@@ -29,8 +29,10 @@ public actor HistoryStore: HistoryStoreProtocol {
     /// Entries older than this are dropped from both memory and disk on
     /// every write. Default 30 days. The retention cap is enforced on
     /// *persist* (not just in-memory filters) so the on-disk JSON
-    /// actually shrinks over time.
-    private let retentionDays: Int
+    /// actually shrinks over time. Mutable because the user can change
+    /// it at runtime via Settings → General — the controller pushes
+    /// new values through `setRetentionDays(_:)`.
+    private var retentionDays: Int
 
     public init(
         storageURL: URL? = nil,
@@ -59,6 +61,23 @@ public actor HistoryStore: HistoryStoreProtocol {
             // Flipping back on — write whatever we have in memory.
             try? persist()
         }
+    }
+
+    /// Update retention policy at runtime. If the new window is tighter
+    /// than the old one, entries that fall outside the new window are
+    /// pruned immediately (in memory and on disk) — the user expects
+    /// "shorten to 7 days" to take effect now, not at the next
+    /// dictation. Widening the window is a no-op against current state
+    /// because entries we already dropped can't come back.
+    public func setRetentionDays(_ value: Int) async {
+        let clamped = max(1, value)
+        guard retentionDays != clamped else { return }
+        let isTighter = clamped < retentionDays
+        retentionDays = clamped
+        guard isTighter else { return }
+        ensureLoaded()
+        pruneExpired()
+        try? persist()
     }
 
     private func ensureLoaded() {
