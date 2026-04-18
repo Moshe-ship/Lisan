@@ -46,7 +46,7 @@ public enum WhisperModelCatalog {
             downloadURL: URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin")!,
             expectedSizeBytes: 77_691_713,
             sizeLabel: "74 MB",
-            summary: "Fastest. English-biased; Arabic detection often wrong on short clips."
+            summary: "Fastest. Multilingual but weak on Arabic; accuracy drops noticeably on short clips."
         ),
         Entry(
             id: "base",

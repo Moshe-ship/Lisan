@@ -10,54 +10,64 @@ struct EngineSettingsSection: View {
 
     var body: some View {
         settingsCard("Engine") {
+            Text("Backend: Whisper.cpp")
+                .font(StenoDesign.caption())
+                .foregroundStyle(StenoDesign.textSecondary)
+
             ModelPickerView(preferences: $preferences)
 
             Divider()
 
-            TextField("whisper-cli path", text: $preferences.dictation.whisperCLIPath)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(.body, design: .monospaced))
-                .truncationMode(.middle)
-            if let error = whisperCLIPathError {
-                Text(error)
-                    .font(StenoDesign.caption())
-                    .foregroundStyle(StenoDesign.error)
-            }
-
-            TextField("Model path", text: modelPathBinding)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(.body, design: .monospaced))
-                .truncationMode(.middle)
-            if let error = modelPathError {
-                Text(error)
-                    .font(StenoDesign.caption())
-                    .foregroundStyle(StenoDesign.error)
-            }
-
-            Stepper(value: $preferences.dictation.threadCount, in: 1...16) {
-                Text("Thread count: \(preferences.dictation.threadCount)")
-            }
-
-            Divider()
-
-            Toggle("Voice Activity Detection (VAD)", isOn: $preferences.dictation.vadEnabled)
-                .font(StenoDesign.bodyEmphasis())
-
-            if preferences.dictation.vadEnabled {
-                TextField("VAD model path", text: $preferences.dictation.vadModelPath)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.body, design: .monospaced))
-                    .truncationMode(.middle)
-                if let error = vadModelPathError {
-                    HStack(spacing: StenoDesign.xs) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(StenoDesign.caption())
+            DisclosureGroup("Advanced paths & tuning") {
+                VStack(alignment: .leading, spacing: StenoDesign.sm) {
+                    TextField("whisper-cli path", text: $preferences.dictation.whisperCLIPath)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.caption, design: .monospaced))
+                        .truncationMode(.middle)
+                    if let error = whisperCLIPathError {
                         Text(error)
                             .font(StenoDesign.caption())
+                            .foregroundStyle(StenoDesign.error)
                     }
-                    .foregroundStyle(StenoDesign.warning)
+
+                    TextField("Model path", text: modelPathBinding)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.caption, design: .monospaced))
+                        .truncationMode(.middle)
+                    if let error = modelPathError {
+                        Text(error)
+                            .font(StenoDesign.caption())
+                            .foregroundStyle(StenoDesign.error)
+                    }
+
+                    Stepper(value: $preferences.dictation.threadCount, in: 1...16) {
+                        Text("Thread count: \(preferences.dictation.threadCount)")
+                            .font(StenoDesign.caption())
+                    }
+
+                    Toggle("Voice Activity Detection (VAD)", isOn: $preferences.dictation.vadEnabled)
+                        .font(StenoDesign.caption())
+
+                    if preferences.dictation.vadEnabled {
+                        TextField("VAD model path", text: $preferences.dictation.vadModelPath)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.caption, design: .monospaced))
+                            .truncationMode(.middle)
+                        if let error = vadModelPathError {
+                            HStack(spacing: StenoDesign.xs) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(StenoDesign.caption())
+                                Text(error)
+                                    .font(StenoDesign.caption())
+                            }
+                            .foregroundStyle(StenoDesign.warning)
+                        }
+                    }
                 }
+                .padding(.top, StenoDesign.xs)
             }
+            .font(StenoDesign.caption())
+            .foregroundStyle(StenoDesign.textSecondary)
 
             HStack(spacing: StenoDesign.sm) {
                 Button {
