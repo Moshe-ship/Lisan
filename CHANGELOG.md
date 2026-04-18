@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.11] - 2026-04-18
+
+### Changed
+- Menu bar: "Show Steno"/"Quit Steno" → "Show Lisan"/"Quit Lisan".
+- Menu bar now shows read-only "Model: <name>" and "Language: <mode>"
+  rows above the action items for at-a-glance status.
+
+## [0.3.10] - 2026-04-18
+
+### Added
+- Bootstrap sets `vocabularyFilePath` to the bundled `packs/`
+  directory on first run (only when empty), so new installs get
+  dialect/topic biasing for all 10 vocabulary packs immediately
+  without any user action.
+
+## [0.3.9] - 2026-04-18
+
+### Changed
+- `ModelPickerView` refactored to take `Binding<String>` directly
+  instead of `Binding<AppPreferences>`. Same view now hosted in both
+  Settings → Engine and Onboarding step 3.
+- Onboarding step 3 ("Local Transcription Setup") replaced with the
+  full model picker. Raw path fields moved under an "Advanced: manual
+  paths" disclosure. New users pick their model during setup instead
+  of defaulting silently to `ggml-base.bin`.
+
+## [0.3.8] - 2026-04-18
+
+### Added
+- `packs/` bundled inside `Lisan.app/Contents/Resources/packs/` via
+  project.yml. All 10 vocabulary packs (msa-business, khaleeji-common,
+  shami-common, saudi-places, saudi-government, gcc-brands,
+  agency-bilingual, medical-arabic, tech-bilingual, islamic-terms)
+  now ride inside the signed app bundle.
+- `VocabularyPackPicker` surfaced in Settings → Language. "Use all
+  packs" / "Remove all" / per-pack "Use only this". Resolves bundled
+  packs first, dev-repo fallback second.
+- Active-model badge in the Record tab: "Model: Small · 465 MB"
+  shown below the status text, using
+  `WhisperModelCatalog.entry(forModelPath:)`.
+
+### Changed
+- Raw vocabulary path moved under a collapsed "Custom vocabulary file"
+  disclosure in Settings → Language.
+
 ## [0.3.7] - 2026-04-18
 
 ### Changed
