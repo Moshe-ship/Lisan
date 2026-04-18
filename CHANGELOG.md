@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.12] - 2026-04-18
+
+### Added
+- Real two-pass language detection. When
+  `dictation.twoPassAutoDetect` is on and language mode is Auto, the
+  engine now runs `whisper-cli -dl` first, parses whisper's own
+  detected language code from stderr
+  (`auto-detected language: <code> (p = ...)`), then runs the real
+  decode with that code as explicit `-l`. This directly addresses
+  whisper's single-pass bias toward English on short Arabic clips.
+- Settings → Language → "Accurate auto-detect (slower)" toggle.
+  Only appears when Language is set to Auto. Off by default. Trades
+  ~300-500ms extra latency per dictation for materially better
+  short-clip Arabic recognition.
+- Three new tests for two-pass behavior
+  (`WhisperCLITranscriptionEngineTests`): detected `ar` is forwarded
+  as `-l ar`; unrecognized detections (e.g. `sv`) fall back to
+  `-l auto` instead of forcing a wrong language; `-dl` is never
+  invoked when the flag is off. Total suite: 209/209 passing.
+
+### Changed
+- Settings → Language "Auto" description rewritten to state the
+  honest limitation: whisper.cpp does not code-switch — it picks
+  one language per recording.
+
 ## [0.3.11] - 2026-04-18
 
 ### Changed
