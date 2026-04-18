@@ -5,6 +5,166 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.18] - 2026-04-18
+
+### Fixed
+- `HistoryPruneTrigger.disablePersistenceClearedFile` was defined in
+  the diagnostic event enum and rendered by `DiagnosticsSettingsSection`
+  but never actually emitted — the audit trail v0.3.17 claimed for
+  "turning off transcript history" was a dangling UI row.
+- `HistoryApplyResult` gains `clearedOnDiskCount: Int?`.
+  `setPersistOnDisk(false)` populates it when a file existed and was
+  removed. `DictationController.applyPreferencesLocally` emits
+  `.historyPruned(count: N, trigger: .disablePersistenceClearedFile)`
+  and surfaces "Cleared on-disk history (N entries kept in memory
+  only)." status.
+
+### Added
+- Two new `HistoryRetentionTests`: `clearedOnDiskCount == 3` after
+  flipping off with entries on disk; `clearedOnDiskCount == nil` when
+  no file existed (skips noise events). Suite: 239/239.
+
+## [0.3.17] - 2026-04-18
+
+### Added
+- UX transparency for destructive privacy actions. Every retention-
+  shortening or persistence-off flip now produces three visible
+  artifacts: a status message on the main window, a
+  `DiagnosticEvent.historyPruned(count:trigger:)` row in Settings →
+  Diagnostics, and a trigger discriminator
+  (`retentionTightened` / `bootstrapLegacyUpgrade` /
+  `disablePersistenceClearedFile`).
+- Disk-persist failures are now visible. `setPersistOnDisk` and
+  `setRetentionDays` return `HistoryApplyResult { prunedCount,
+  clearedOnDiskCount, persistError? }` instead of Void.
+  `DictationController` records `.persistenceFailure(target:)` and
+  shows "History settings updated in memory, but the on-disk write
+  failed." on error.
+- First-run-after-upgrade migration notice.
+  `HistoryStore.consumeLegacyPruneCount()` surfaces the first-load
+  prune count exactly once per session; bootstrap surfaces it as
+  "Pruned N legacy transcript entries to match your N-day retention."
+- Destructive-change warning under the retention stepper in Settings
+  → General: "Shortening this window permanently deletes entries
+  older than the new window. Pruning cannot be undone."
+
+### Changed
+- Added `HistoryPreferences` DTO + `HistoryStore.applyPreferences(_:)`
+  that merges both setters into one result. Controller calls the
+  single method instead of pushing each field by hand, structurally
+  preventing the class of bug that caused v0.3.16.
+- Two new `DiagnosticEvent` cases: `historyPruned(count:trigger:)`
+  and `persistenceFailure(target:)`. Both content-leak-proof by
+  type (bounded enums, no free-form strings). Rendering added for
+  both in Diagnostics UI. Closed-sum-coverage test updated.
+
+## [0.3.16] - 2026-04-18
+
+### Fixed
+- Retention-days slider was cosmetic until app restart.
+  `HistoryStore.retentionDays` was `let`; `setRetentionDays` didn't
+  exist; `applyPreferencesLocally` only pushed `persistOnDisk`.
+  Changing "Keep for N days" updated the pref and wrote to disk but
+  never reached the live actor.
+- `retentionDays` is now `var`. New
+  `HistoryStore.setRetentionDays(_:)` clamps to ≥1, is a no-op on
+  unchanged, and on tightening immediately calls `pruneExpired()` +
+  `persist()` so in-memory AND the on-disk JSON drop out-of-window
+  entries immediately. Widening is a no-op against current state
+  (pruning is destructive).
+- `DictationController.applyPreferencesLocally` pushes both
+  `persistOnDisk` and `historyRetentionDays` on every prefs change.
+
+### Added
+- Two runtime-retention tests: tightening prunes in memory AND on
+  disk; widening does not resurrect already-pruned entries.
+
+## [0.3.15] - 2026-04-18
+
+### Fixed
+- Transcript history was plaintext at rest with no retention. Every
+  `persist()` now writes POSIX `0600` (owner-only) and marks
+  `isExcludedFromBackup`. Retention enforced on append: entries
+  older than `preferences.general.historyRetentionDays` (default 30,
+  user-configurable 1–365) are pruned from memory AND the JSON file.
+- `FileDiagnosticsStorage` claimed bounded retention but grew
+  unbounded on disk. New `maxLinesOnDisk` (default 1000) and
+  `capAfterRotation` (default 500) parameters. On append, a
+  `stat()` pre-check shortcircuits when the file is small; when it
+  exceeds `maxLinesOnDisk`, rotation rewrites atomically keeping the
+  last `capAfterRotation` entries with `0600`.
+- `LOGGING_POLICY.md` section 4 was inaccurate. Rewrote from "no
+  network traffic" to the actual rule: voice/audio/transcripts
+  never leave the device; the only outbound HTTP is a user-initiated
+  GET to Hugging Face when Download is clicked in the Model picker.
+  Added on-disk retention table enumerating both local files
+  (contents / retention / permissions).
+
+### Added
+- `AppPreferences.General.persistHistoryOnDisk` (default true) +
+  Settings → General "Save transcript history to disk" toggle. When
+  off, store runs in-memory-only and existing file is deleted.
+- Five new `HistoryRetentionTests`: retention pruning on append,
+  on-disk JSON reflects retention, in-memory-only mode writes no
+  file, toggling off deletes existing file, 0600 file permissions
+  verified via stat.
+- Two new `DiagnosticsTelemetryTests`: rotation fires under load
+  (400 appends → ≤50 loaded lines), rotation preserves tail.
+- Deploy script retroactively `chmod 0600`s pre-existing
+  `transcript-history.json` on upgrade.
+
+## [0.3.14] - 2026-04-18
+
+### Added
+- History raw-vs-cleaned view. Expanded entries show the raw
+  transcript (pre-cleanup) alongside the clean text when they
+  differ. "Copy raw" and a dedicated "Correct" button in the footer
+  replace the context-menu-only Correct action.
+- `PermissionRepairView` surfaced via a "Fix permissions" button on
+  the Record tab banner. Diagnoses each of the three required
+  permissions (Microphone, Accessibility, Input Monitoring) with
+  explicit badges, per-row pane router, bundle-path reveal, and
+  inline Restart-required callout on one screen.
+- `AppProfileDefaults` seeds per-bundle-id `StyleProfile`s on first
+  run: terminals/IDEs → passthrough, Claude/ChatGPT/Codex →
+  passthrough, Notes/Ulysses/Obsidian → long-form, Messages/
+  WhatsApp/Telegram/Slack/Discord → chat. Bootstrap only fills
+  missing bundle IDs so user overrides are preserved.
+- Vocabulary pack multi-select with priority.
+  `enabledPackFilenames [String]` preference (ordered) +
+  `WhisperCLITranscriptionEngine.loadVocabulary` respects the
+  order. Rewritten `VocabularyPackPicker` with chips row,
+  per-row checkbox + priority index + reorder arrows, "Use
+  all" / "Clear all", and explicit "Decoder bias — fed to
+  whisper as a prompt" subtitle.
+- Segmented auto-detect. `AudioSegmenter` splits WAVs on silence
+  using 30ms RMS windows; `SessionCoordinator` transcribes each
+  segment independently when opted in + auto mode + clip ≥ 3s.
+  Phrase-level code-switch support — not word-level.
+- 16 `AudioSegmenter` tests (6 pure-math + 10 integration against
+  real WAV I/O: mono/stereo/44.1kHz/leading-silence/all-silence/
+  multi-gap ordering/garbage-input rejection/zero-duration/fast-
+  path purity).
+
+## [0.3.13] - 2026-04-18
+
+### Added
+- Arabic eval framework. `eval/arabic/` contains four benchmark
+  manifests conforming to the existing `BenchmarkManifest` schema:
+  `msa.json` (30 utterances), `dialect-shami.json` (15),
+  `dialect-khaleeji.json` (15), `mixed.json` (20 bilingual). Total
+  80 reference transcripts. Audio files not shipped —
+  `RECORDING_PROTOCOL.md` documents mic + format + per-clip
+  procedure.
+- `CorrectionMemorySheet` in History. Right-click any transcript →
+  "Correct transcript…". Transcribed vs corrected side-by-side with
+  live Needleman-Wunsch token alignment proposing per-word
+  substitutions and per-correction scope picker (Everywhere / This
+  app). Each saved correction becomes a `LexiconEntry` upserted on
+  `(term, scope)` via `DictationController.addLexiconEntry`,
+  rebuilding the live cleanup runtime so the fix applies to the
+  very next dictation.
+
 ## [0.3.12] - 2026-04-18
 
 ### Added
