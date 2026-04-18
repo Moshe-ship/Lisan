@@ -32,31 +32,37 @@ struct LanguageSettingsSection: View {
 
                 Divider()
 
-                Text("Vocabulary file")
-                    .font(StenoDesign.bodyEmphasis())
+                VocabularyPackPicker(preferences: $preferences)
 
-                TextField(
-                    "Path to vocabulary.txt (one phrase per line)",
-                    text: $preferences.dictation.vocabularyFilePath
-                )
-                .textFieldStyle(.roundedBorder)
-                .font(.system(.body, design: .monospaced))
-                .truncationMode(.middle)
+                DisclosureGroup("Custom vocabulary file") {
+                    VStack(alignment: .leading, spacing: StenoDesign.xs) {
+                        TextField(
+                            "Path to vocabulary.txt or packs directory",
+                            text: $preferences.dictation.vocabularyFilePath
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.caption, design: .monospaced))
+                        .truncationMode(.middle)
 
-                if !preferences.dictation.vocabularyFilePath.isEmpty {
-                    let fileExists = FileManager.default.fileExists(atPath: preferences.dictation.vocabularyFilePath)
-                    HStack(spacing: StenoDesign.xs) {
-                        Image(systemName: fileExists ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        if !preferences.dictation.vocabularyFilePath.isEmpty {
+                            let fileExists = FileManager.default.fileExists(atPath: preferences.dictation.vocabularyFilePath)
+                            HStack(spacing: StenoDesign.xs) {
+                                Image(systemName: fileExists ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                    .font(StenoDesign.caption())
+                                Text(fileExists ? "Path found" : "Path not found")
+                                    .font(StenoDesign.caption())
+                            }
+                            .foregroundStyle(fileExists ? StenoDesign.success : StenoDesign.warning)
+                        }
+
+                        Text("Point at a single .txt (one phrase per line) or at a directory — all .txt files in a directory are loaded together.")
                             .font(StenoDesign.caption())
-                        Text(fileExists ? "File found" : "File not found")
-                            .font(StenoDesign.caption())
+                            .foregroundStyle(StenoDesign.textSecondary)
                     }
-                    .foregroundStyle(fileExists ? StenoDesign.success : StenoDesign.warning)
+                    .padding(.top, StenoDesign.xs)
                 }
-
-                Text("Add client names, brand names, Arabic proper nouns, or transliterations — one phrase per line. The engine uses these to bias recognition.")
-                    .font(StenoDesign.caption())
-                    .foregroundStyle(StenoDesign.textSecondary)
+                .font(StenoDesign.caption())
+                .foregroundStyle(StenoDesign.textSecondary)
             }
         }
     }

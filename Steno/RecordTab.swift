@@ -85,6 +85,16 @@ struct RecordTab: View {
             }
             .padding(.top, StenoDesign.sm)
 
+            // Active model indicator — so the user always knows which
+            // whisper model is loaded without opening Settings.
+            if let modelLabel = activeModelLabel {
+                Text(modelLabel)
+                    .font(StenoDesign.caption())
+                    .foregroundStyle(StenoDesign.textSecondary)
+                    .padding(.top, StenoDesign.xs)
+                    .accessibilityLabel("Active whisper model: \(modelLabel)")
+            }
+
             Spacer()
 
             // Last transcript card
@@ -312,6 +322,16 @@ struct RecordTab: View {
             }
         }
         .cardStyle()
+    }
+
+    private var activeModelLabel: String? {
+        let path = controller.preferences.dictation.modelPath
+        guard !path.isEmpty else { return nil }
+        if let entry = WhisperModelCatalog.entry(forModelPath: path) {
+            return "Model: \(entry.displayName) · \(entry.sizeLabel)"
+        }
+        let filename = (path as NSString).lastPathComponent
+        return filename.isEmpty ? nil : "Model: \(filename)"
     }
 
     private var emptyStateHint: String {

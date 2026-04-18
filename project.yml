@@ -11,6 +11,9 @@ targets:
     platform: macOS
     sources:
       - path: Steno
+      - path: packs
+        buildPhase: resources
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.lisanapp.lisan
