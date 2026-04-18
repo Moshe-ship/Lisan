@@ -250,6 +250,115 @@ func historyWideningDoesNotResurrectDropped() async throws {
             "Widening retention shouldn't resurrect entries already pruned")
 }
 
+@Test("Observability: setRetentionDays returns prune count for tightening")
+func historyReturnsPruneCountOnTighten() async throws {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("history-count-\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let store = HistoryStore(
+        storageURL: tmp,
+        clipboardService: StubClipboardService(),
+        maxEntries: 500,
+        persistOnDisk: true,
+        retentionDays: 30
+    )
+
+    // Two entries older than the new 7-day window, one inside it.
+    for daysAgo in [10, 20, 2] {
+        try await store.append(entry: TranscriptEntry(
+            id: UUID(),
+            createdAt: Date().addingTimeInterval(-Double(daysAgo) * 86_400),
+            appBundleID: "com.age.\(daysAgo)",
+            rawText: "r", cleanText: "c",
+            audioURL: nil, insertionStatus: .inserted
+        ))
+    }
+
+    let result = await store.setRetentionDays(7)
+    #expect(result.prunedCount == 2, "Expected 2 pruned (the 10 and 20-day entries), got \(result.prunedCount)")
+    #expect(result.persistError == nil, "Healthy disk write should not surface an error")
+}
+
+@Test("Observability: applyPreferences aggregates persist + retention into a single result")
+func historyApplyPreferencesAggregates() async throws {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("history-apply-\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    let store = HistoryStore(
+        storageURL: tmp,
+        clipboardService: StubClipboardService(),
+        maxEntries: 500,
+        persistOnDisk: true,
+        retentionDays: 30
+    )
+    try await store.append(entry: TranscriptEntry(
+        id: UUID(),
+        createdAt: Date().addingTimeInterval(-25 * 86_400),
+        appBundleID: "com.aged",
+        rawText: "r", cleanText: "c",
+        audioURL: nil, insertionStatus: .inserted
+    ))
+
+    let result = await store.applyPreferences(
+        HistoryPreferences(persistOnDisk: true, retentionDays: 14)
+    )
+    #expect(result.prunedCount == 1)
+    #expect(result.persistError == nil)
+}
+
+@Test("Legacy prune count: first-load prune is observable via consumeLegacyPruneCount()")
+func historyLegacyPruneCount() async throws {
+    let tmp = FileManager.default.temporaryDirectory
+        .appendingPathComponent("history-legacy-\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: tmp) }
+
+    // Seed the file as if a pre-retention build wrote 3 entries, one of
+    // which would be outside the new default 30-day window.
+    let prewritten: [TranscriptEntry] = [
+        TranscriptEntry(
+            id: UUID(),
+            createdAt: Date().addingTimeInterval(-60 * 86_400),
+            appBundleID: "com.very.old",
+            rawText: "old", cleanText: "old",
+            audioURL: nil, insertionStatus: .inserted
+        ),
+        TranscriptEntry(
+            id: UUID(),
+            createdAt: Date().addingTimeInterval(-5 * 86_400),
+            appBundleID: "com.recent",
+            rawText: "recent", cleanText: "recent",
+            audioURL: nil, insertionStatus: .inserted
+        ),
+        TranscriptEntry(
+            id: UUID(),
+            createdAt: Date().addingTimeInterval(-1 * 86_400),
+            appBundleID: "com.newest",
+            rawText: "newest", cleanText: "newest",
+            audioURL: nil, insertionStatus: .inserted
+        ),
+    ]
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    try encoder.encode(prewritten).write(to: tmp)
+
+    let store = HistoryStore(
+        storageURL: tmp,
+        clipboardService: StubClipboardService(),
+        maxEntries: 500,
+        persistOnDisk: true,
+        retentionDays: 30
+    )
+
+    // First consume reports pruned count. Second returns 0 (idempotent
+    // single-session consumption).
+    let first = await store.consumeLegacyPruneCount()
+    #expect(first == 1, "Expected 1 legacy prune (the 60-day entry), got \(first)")
+    let second = await store.consumeLegacyPruneCount()
+    #expect(second == 0, "Counter should reset after first consume")
+}
+
 @Test("On-disk history file is written with 0600 permissions")
 func historyFilePermissions() async throws {
     let tmp = FileManager.default.temporaryDirectory

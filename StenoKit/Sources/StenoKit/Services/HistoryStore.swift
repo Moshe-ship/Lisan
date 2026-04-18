@@ -14,6 +14,41 @@ public enum HistoryStoreError: Error, LocalizedError {
     }
 }
 
+/// DTO carrying the history-related subset of preferences. Lives in the
+/// same module as `HistoryStore` so it's visible to both the app target
+/// (which builds this from `AppPreferences.General`) and the store's
+/// `applyPreferences(_:)` method. New history-related prefs only have
+/// to be added here + in `HistoryStore.applyPreferences` — the
+/// controller side doesn't change at all.
+public struct HistoryPreferences: Sendable, Equatable {
+    public var persistOnDisk: Bool
+    public var retentionDays: Int
+
+    public init(persistOnDisk: Bool, retentionDays: Int) {
+        self.persistOnDisk = persistOnDisk
+        self.retentionDays = retentionDays
+    }
+}
+
+/// Structured result of an `applyPreferences` call. Non-zero
+/// `prunedCount` means the caller may want to surface a status message
+/// ("Pruned N old entries"). `persistError` is non-nil when the on-disk
+/// write failed — callers that care about durability can log or retry;
+/// callers that don't can ignore it. Replaces the old asymmetry where
+/// some persist paths propagated errors and others swallowed them
+/// silently.
+public struct HistoryApplyResult: Sendable {
+    public let prunedCount: Int
+    public let persistError: Error?
+
+    public init(prunedCount: Int, persistError: Error?) {
+        self.prunedCount = prunedCount
+        self.persistError = persistError
+    }
+
+    public var hadError: Bool { persistError != nil }
+}
+
 public actor HistoryStore: HistoryStoreProtocol {
     private var entries: [TranscriptEntry] = []
     private var hasLoaded = false
@@ -51,48 +86,126 @@ public actor HistoryStore: HistoryStoreProtocol {
     /// Update persistence policy at runtime (user toggled the Settings
     /// switch). When flipping from on → off, we also clear the on-disk
     /// file so the act of disabling actually removes what was there.
-    public func setPersistOnDisk(_ value: Bool) async {
-        guard persistOnDisk != value else { return }
+    /// Persist errors surface through the thrown error channel rather
+    /// than being silently swallowed — callers can observe failure,
+    /// log it via diagnostics, and optionally surface to the user.
+    @discardableResult
+    public func setPersistOnDisk(_ value: Bool) async -> HistoryApplyResult {
+        guard persistOnDisk != value else {
+            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+        }
         persistOnDisk = value
         if !value {
-            try? FileManager.default.removeItem(at: storageURL)
+            do {
+                try FileManager.default.removeItem(at: storageURL)
+            } catch CocoaError.fileNoSuchFile {
+                // Already gone; not an error.
+            } catch {
+                return HistoryApplyResult(prunedCount: 0, persistError: error)
+            }
             hasPreparedStorageDirectory = false
-        } else {
-            // Flipping back on — write whatever we have in memory.
-            try? persist()
+            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+        }
+        // Flipping back on — write whatever we have in memory.
+        do {
+            try persist()
+            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+        } catch {
+            return HistoryApplyResult(prunedCount: 0, persistError: error)
         }
     }
 
     /// Update retention policy at runtime. If the new window is tighter
-    /// than the old one, entries that fall outside the new window are
-    /// pruned immediately (in memory and on disk) — the user expects
-    /// "shorten to 7 days" to take effect now, not at the next
-    /// dictation. Widening the window is a no-op against current state
-    /// because entries we already dropped can't come back.
-    public func setRetentionDays(_ value: Int) async {
+    /// than the old one, entries outside the new window are pruned
+    /// immediately (in memory and on disk) — the user expects "shorten
+    /// to 7 days" to take effect now, not at the next dictation.
+    /// Widening the window is a no-op against current state because
+    /// entries we already dropped can't come back.
+    ///
+    /// Return value reports the delta so the caller can surface it as
+    /// user-visible status, and propagates any disk-persist error via
+    /// `persistError`. This replaces the previous `try?`-swallows-the-
+    /// error behavior that let memory and disk silently drift.
+    @discardableResult
+    public func setRetentionDays(_ value: Int) async -> HistoryApplyResult {
         let clamped = max(1, value)
-        guard retentionDays != clamped else { return }
+        guard retentionDays != clamped else {
+            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+        }
         let isTighter = clamped < retentionDays
         retentionDays = clamped
-        guard isTighter else { return }
+        guard isTighter else {
+            return HistoryApplyResult(prunedCount: 0, persistError: nil)
+        }
         ensureLoaded()
+        let before = entries.count
         pruneExpired()
-        try? persist()
+        let pruned = before - entries.count
+        do {
+            try persist()
+            return HistoryApplyResult(prunedCount: pruned, persistError: nil)
+        } catch {
+            // In-memory pruning already happened. The disk write failed,
+            // so disk still holds the wider window. We surface the error
+            // so the caller can tell the user disk didn't keep up.
+            return HistoryApplyResult(prunedCount: pruned, persistError: error)
+        }
     }
+
+    /// Convenience that applies both persistence + retention changes
+    /// in a single call. Centralizes the pref→store push so new
+    /// history-related preferences only require adding a field to
+    /// `HistoryPreferences` and a line here — caller sites stay
+    /// identical. Addresses the class-of-bug where an added pref is
+    /// defined, surfaced in UI, and persisted but never pushed into
+    /// the live actor (the v0.3.16 bug).
+    @discardableResult
+    public func applyPreferences(_ prefs: HistoryPreferences) async -> HistoryApplyResult {
+        let persistResult = await setPersistOnDisk(prefs.persistOnDisk)
+        let retentionResult = await setRetentionDays(prefs.retentionDays)
+        // Merge: sum prune counts, keep first error (persist error
+        // dominates if both failed).
+        return HistoryApplyResult(
+            prunedCount: persistResult.prunedCount + retentionResult.prunedCount,
+            persistError: persistResult.persistError ?? retentionResult.persistError
+        )
+    }
+
+    /// Count of entries that were dropped the first time the store
+    /// hydrated from disk, nil if it hasn't loaded yet. Non-nil + > 0
+    /// is the "first-run after upgrade to a retention-aware build"
+    /// signal — callers that want to show a migration notice to the
+    /// user read this via `legacyPruneCount()` after bootstrap.
+    private var initialLoadPruneCount: Int?
 
     private func ensureLoaded() {
         guard !hasLoaded else { return }
         hasLoaded = true
         guard persistOnDisk else {
             entries = []
+            initialLoadPruneCount = 0
             return
         }
         do {
             entries = try Self.loadEntries(from: storageURL)
+            let before = entries.count
             pruneExpired()
+            initialLoadPruneCount = before - entries.count
         } catch {
             entries = []
+            initialLoadPruneCount = 0
         }
+    }
+
+    /// Returns the count of entries that were pruned on the first load
+    /// and then resets the counter so the caller only surfaces the
+    /// notice once per app session. Returns 0 if the store hasn't been
+    /// touched yet or the first load pruned nothing.
+    public func consumeLegacyPruneCount() async -> Int {
+        ensureLoaded()
+        let count = initialLoadPruneCount ?? 0
+        initialLoadPruneCount = 0
+        return count
     }
 
     public func append(entry: TranscriptEntry) async throws {

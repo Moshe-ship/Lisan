@@ -45,6 +45,22 @@ public enum DiagnosticEvent: Sendable, Codable, Equatable {
     /// (locally only; no network calls are made by this service).
     case notarizationMismatch
 
+    /// User-initiated privacy action on transcript history dropped N
+    /// entries. No content, only a count; `trigger` says why. Emitted
+    /// when retention is shortened in Settings or when a first-run-
+    /// after-upgrade bootstrap applies the new default window to a
+    /// legacy history file. Auditable trail so users can verify the
+    /// retention slider is actually doing what it says.
+    case historyPruned(count: Int, trigger: HistoryPruneTrigger)
+
+    /// On-disk write to a privacy-adjacent local file failed. Lets the
+    /// user see that their retention change took effect in memory but
+    /// not on disk, so they know to retry or check disk space rather
+    /// than assume silence means success. No path is included — the
+    /// file is always one we already know about (transcript-history
+    /// .json or diagnostics.jsonl).
+    case persistenceFailure(target: PersistenceTarget)
+
     // MARK: - Bounded enum payloads
 
     public enum StartupPhase: String, Sendable, Codable { case preferencesLoad, pipelineBootstrap, hotkeyRegistration, menuBarSetup, uiPresent }
@@ -55,6 +71,8 @@ public enum DiagnosticEvent: Sendable, Codable, Equatable {
     public enum PermissionKind: String, Sendable, Codable { case microphone, accessibility, inputMonitoring, loginItemsApproval }
     public enum ConfigField: String, Sendable, Codable { case threadCount, whisperCLIPath, modelPath, vocabularyPath, languageMode }
     public enum ConfigFailureReason: String, Sendable, Codable { case missing, notAbsolutePath, notReadable, outOfRange, unknownValue }
+    public enum HistoryPruneTrigger: String, Sendable, Codable { case retentionTightened, bootstrapLegacyUpgrade, disablePersistenceClearedFile }
+    public enum PersistenceTarget: String, Sendable, Codable { case transcriptHistory, diagnosticsLog, preferences }
 
     // MARK: - Controlled strings
 

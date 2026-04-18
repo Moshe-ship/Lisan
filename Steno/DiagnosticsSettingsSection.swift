@@ -112,6 +112,16 @@ struct DiagnosticsSettingsSection: View {
             return "Config field \(field.rawValue) rejected: \(reason.rawValue)"
         case .notarizationMismatch:
             return "Notarization ticket is missing or invalid"
+        case .historyPruned(let count, let trigger):
+            let label: String
+            switch trigger {
+            case .retentionTightened:          label = "retention shortened"
+            case .bootstrapLegacyUpgrade:      label = "legacy history aligned with current retention"
+            case .disablePersistenceClearedFile: label = "history persistence turned off"
+            }
+            return "Pruned \(count) transcript entr\(count == 1 ? "y" : "ies") — \(label)"
+        case .persistenceFailure(let target):
+            return "Disk write failed for \(target.rawValue) — in-memory state is correct; retry or check disk"
         }
     }
 
@@ -124,16 +134,18 @@ struct DiagnosticsSettingsSection: View {
         case .permissionDenied:           return "lock.slash"
         case .configValidationFailure:    return "gearshape.badge.xmark"
         case .notarizationMismatch:       return "seal.slash"
+        case .historyPruned:              return "trash.circle"
+        case .persistenceFailure:         return "externaldrive.badge.exclamationmark"
         }
     }
 
     private func color(for event: DiagnosticEvent) -> Color {
         switch event {
-        case .startupFailure, .engineError, .notarizationMismatch:
+        case .startupFailure, .engineError, .notarizationMismatch, .persistenceFailure:
             return StenoDesign.error
         case .insertionFailure, .modelNotFound, .configValidationFailure:
             return StenoDesign.warning
-        case .permissionDenied:
+        case .permissionDenied, .historyPruned:
             return StenoDesign.accent
         }
     }

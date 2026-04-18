@@ -39,6 +39,19 @@ struct GeneralSettingsSection: View {
                         .font(StenoDesign.caption())
                         .foregroundStyle(StenoDesign.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    // Destructive-change warning: pruning is permanent.
+                    // No undo is possible because we don't keep tombstones
+                    // of deleted entries — they're just gone.
+                    HStack(alignment: .top, spacing: StenoDesign.xs) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(StenoDesign.warning)
+                            .font(StenoDesign.caption())
+                        Text("Shortening this window permanently deletes entries older than the new window. Pruning cannot be undone.")
+                            .font(StenoDesign.caption())
+                            .foregroundStyle(StenoDesign.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }

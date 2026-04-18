@@ -207,6 +207,20 @@ final class DictationController: ObservableObject {
         await refreshHistory()
         overlay.prepareWindow()
         hasBootstrapped = true
+
+        // Post-bootstrap: if the store pruned entries during its first
+        // load (signal for "upgrading from a pre-retention build"),
+        // surface the count to the user + telemetry so the migration
+        // isn't silent.
+        let legacyPruned = await historyStore.consumeLegacyPruneCount()
+        if legacyPruned > 0 {
+            await telemetry.record(.historyPruned(
+                count: legacyPruned,
+                trigger: .bootstrapLegacyUpgrade
+            ))
+            let word = legacyPruned == 1 ? "entry" : "entries"
+            status = "Pruned \(legacyPruned) legacy transcript \(word) to match your \(preferences.general.historyRetentionDays)-day retention."
+        }
     }
 
     private static func bundledPacksDirectory() -> URL? {
@@ -605,16 +619,37 @@ final class DictationController: ObservableObject {
         hotkey.globalToggleKeyCode = newValue.hotkeys.handsFreeGlobalKeyCode
         applyDockVisibility(showDockIcon: newValue.general.showDockIcon)
 
-        // Push the user's history-persistence choice into the store.
-        // When flipping the toggle off, the store removes the on-disk
-        // file immediately — no delayed cleanup surprises. Retention
-        // days is also pushed so tightening the window prunes now
-        // rather than waiting for the next dictation / app restart.
-        let persist = newValue.general.persistHistoryOnDisk
-        let retention = newValue.general.historyRetentionDays
-        Task { [historyStore] in
-            await historyStore.setPersistOnDisk(persist)
-            await historyStore.setRetentionDays(retention)
+        // Push the history-related prefs to the live store via a single
+        // DTO so new fields only have to be added in one place (the
+        // HistoryPreferences struct). Then surface the structured
+        // result: user-visible status for prunes, telemetry for
+        // failures. This replaces the previous push-each-field-by-hand
+        // pattern that caused the v0.3.16 slider bug.
+        let historyPrefs = HistoryPreferences(
+            persistOnDisk: newValue.general.persistHistoryOnDisk,
+            retentionDays: newValue.general.historyRetentionDays
+        )
+        Task { [historyStore, telemetry] in
+            let result = await historyStore.applyPreferences(historyPrefs)
+            if result.prunedCount > 0 {
+                await telemetry.record(.historyPruned(
+                    count: result.prunedCount,
+                    trigger: .retentionTightened
+                ))
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    let word = result.prunedCount == 1 ? "entry" : "entries"
+                    self.status = "Pruned \(result.prunedCount) transcript \(word) per your retention setting."
+                }
+            }
+            if result.hadError {
+                await telemetry.record(.persistenceFailure(target: .transcriptHistory))
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    self.status = "History settings updated in memory, but the on-disk write failed."
+                    self.lastError = result.persistError?.localizedDescription ?? "disk write failed"
+                }
+            }
         }
     }
 

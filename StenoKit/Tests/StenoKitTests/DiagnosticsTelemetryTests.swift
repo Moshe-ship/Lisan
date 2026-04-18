@@ -174,8 +174,10 @@ struct DiagnosticsTelemetryTests {
             .permissionDenied(permission: .microphone),
             .configValidationFailure(field: .threadCount, reason: .outOfRange),
             .notarizationMismatch,
+            .historyPruned(count: 3, trigger: .retentionTightened),
+            .persistenceFailure(target: .transcriptHistory),
         ]
-        #expect(all.count == 7)
+        #expect(all.count == 9)
     }
 
     // MARK: - On-disk retention
